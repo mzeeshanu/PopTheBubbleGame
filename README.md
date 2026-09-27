@@ -20,7 +20,9 @@ Browser first, with a clean path to iPad and Android tablets.
 ```
 PopTheBubbleGame/
 ├── README.md          <- you are here
-├── serve.js           <- tiny static server for local playtesting
+├── package.json       <- npm start -> node serve.js (Railway uses this)
+├── railway.json       <- Railway build/deploy config
+├── serve.js           <- static server: local playtesting AND production
 ├── .claude/
 │   └── launch.json    <- lets Claude Code launch the preview
 └── bubble-cat/
@@ -38,6 +40,35 @@ node serve.js
 ```
 
 Then go to http://localhost:5178
+
+## Deploying to Railway
+
+The repo is ready to deploy as-is. On [railway.com](https://railway.com): **New Project →
+Deploy from GitHub repo**, pick this repo, and that is the whole setup. No environment
+variables, no build step, no database.
+
+Railway detects Node from `package.json`, runs `npm start`, and that runs `serve.js`,
+which serves the `bubble-cat/` folder. There are no dependencies to install — the server
+uses only Node's built-in modules, and Three.js comes from a CDN in the browser.
+
+Two details that matter, both already handled in `serve.js`:
+
+- **It listens on `process.env.PORT`.** Railway assigns the port at runtime; a server
+  hardcoded to 5178 will never receive traffic.
+- **It binds `0.0.0.0`, not `localhost`.** A container listening only on `127.0.0.1` is
+  unreachable from outside, and the deploy looks healthy while serving nothing. This is
+  the single most common reason a Railway deploy "succeeds" but the URL times out.
+
+Generate a public domain under **Settings → Networking → Generate Domain** to get a URL.
+
+To deploy from your machine instead of GitHub:
+
+```bash
+npm i -g @railway/cli
+railway login
+railway init
+railway up
+```
 
 ## How it plays
 
