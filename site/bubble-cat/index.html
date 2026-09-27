@@ -30,6 +30,20 @@
     transition:transform .2s, opacity .2s; }
   .heart.gone { opacity:.22; transform:scale(.72); background:#7d8a74; }
 
+  /* the HUD itself ignores pointers so taps fall through to bubbles behind it;
+     anything clickable in there has to opt back in */
+  .iconbtn { pointer-events:auto; border:none; cursor:pointer; font-family:inherit;
+    width:clamp(42px,11vw,54px); height:clamp(42px,11vw,54px); border-radius:999px;
+    background:rgba(255,255,255,.78); color:#3d5a2a;
+    box-shadow:0 4px 0 rgba(90,120,60,.25), 0 8px 18px rgba(0,0,0,.12);
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .08s, box-shadow .08s; }
+  .iconbtn:active { transform:translateY(3px);
+    box-shadow:0 1px 0 rgba(90,120,60,.25), 0 4px 10px rgba(0,0,0,.12); }
+  .iconbtn svg { width:46%; height:46%; fill:currentColor; }
+  .hud.playing .iconbtn { display:flex; }
+  .iconbtn { display:none; }
+
   #combo { position:fixed; left:50%; top:calc(env(safe-area-inset-top) + 74px); transform:translateX(-50%) scale(.6);
     z-index:10; pointer-events:none; color:#fff; font-weight:900; font-size:clamp(18px,5vw,30px);
     text-shadow:0 3px 0 #ff8a3d, 0 6px 14px rgba(0,0,0,.25); opacity:0; transition:opacity .18s, transform .18s; }
@@ -51,13 +65,23 @@
   .btn:active { transform:translateY(5px); box-shadow:0 2px 0 #d2551a, 0 6px 14px rgba(0,0,0,.25); }
   .final { font-size:clamp(20px,5.5vw,30px); color:#fff; font-weight:800; text-shadow:0 3px 8px rgba(0,0,0,.3); }
   .final b { font-size:1.9em; display:block; line-height:1.1; }
+  /* quieter than .btn so Resume stays the obvious thing to press */
+  .btn.ghost { font-size:clamp(16px,4.2vw,21px); padding:12px 32px;
+    background:rgba(255,255,255,.85); color:#3d5a2a; box-shadow:0 5px 0 rgba(90,120,60,.3); }
+  .btn.ghost:active { box-shadow:0 1px 0 rgba(90,120,60,.3); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .row .btn { margin:0; }
+  a.btn { text-decoration:none; display:inline-block; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 
-<div class="hud">
+<div class="hud" id="hud">
   <div class="pill" id="score"><small>SCORE</small><span id="scoreVal">0</span></div>
+  <button class="iconbtn" id="pauseBtn" aria-label="Pause">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg>
+  </button>
   <div class="pill" id="lives"></div>
 </div>
 <div id="combo"></div>
@@ -66,6 +90,16 @@
   <div class="title">Bubble<br>Cat</div>
   <div class="sub">Mochi is blowing bubbles in the park!<br>Tap them before they float away. &#129770;</div>
   <button class="btn" id="playBtn">Play</button>
+  <a class="btn ghost" href="../">More games</a>
+</div>
+
+<div class="overlay hidden" id="pauseScreen">
+  <div class="title">Paused</div>
+  <button class="btn" id="resumeBtn">Resume</button>
+  <div class="row">
+    <button class="btn ghost" id="restartBtn">Start over</button>
+    <a class="btn ghost" href="../">Home</a>
+  </div>
 </div>
 
 <div class="overlay hidden" id="overScreen">
@@ -73,6 +107,7 @@
   <div class="final">Bubbles popped<b id="finalScore">0</b></div>
   <div class="sub" id="bestLine">Best: 0</div>
   <button class="btn" id="againBtn">Play again</button>
+  <a class="btn ghost" href="../">More games</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
@@ -1173,7 +1208,7 @@
   }
 
   // ----------------------------------------------------------------- state
-  var STATE = { MENU: 0, PLAY: 1, OVER: 2 };
+  var STATE = { MENU: 0, PLAY: 1, OVER: 2, PAUSED: 3 };
   var state = STATE.MENU;
   var MAX_LIVES = 5;
   var ESCAPE_Y = 12.5;          // recomputed from the camera framing in resize()
@@ -1185,6 +1220,8 @@
   var comboEl = document.getElementById('combo');
   var startScreen = document.getElementById('startScreen');
   var overScreen = document.getElementById('overScreen');
+  var pauseScreen = document.getElementById('pauseScreen');
+  var hud = document.getElementById('hud');
   var finalScore = document.getElementById('finalScore');
   var bestLine = document.getElementById('bestLine');
 
@@ -1223,11 +1260,29 @@
     state = STATE.PLAY;
     startScreen.classList.add('hidden');
     overScreen.classList.add('hidden');
+    pauseScreen.classList.add('hidden');
+    hud.classList.add('playing');
     audio();
+  }
+
+  function pauseGame() {
+    if (state !== STATE.PLAY) return;
+    state = STATE.PAUSED;
+    pauseScreen.classList.remove('hidden');
+    hud.classList.remove('playing');
+  }
+
+  function resumeGame() {
+    if (state !== STATE.PAUSED) return;
+    state = STATE.PLAY;
+    pauseScreen.classList.add('hidden');
+    hud.classList.add('playing');
+    clock.getDelta();            // drop the paused time so nothing jumps on resume
   }
 
   function gameOver() {
     state = STATE.OVER;
+    hud.classList.remove('playing');
     var best = getBest();
     var isBest = score > best;
     if (isBest) { best = score; setBest(best); }
@@ -1238,6 +1293,15 @@
 
   document.getElementById('playBtn').addEventListener('click', startGame);
   document.getElementById('againBtn').addEventListener('click', startGame);
+  document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+  document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+  document.getElementById('restartBtn').addEventListener('click', startGame);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' && e.key !== 'p' && e.key !== 'P') return;
+    if (state === STATE.PLAY) pauseGame();
+    else if (state === STATE.PAUSED) resumeGame();
+  });
   drawLives();
 
   // ------------------------------------------------------------------ tap
@@ -1357,6 +1421,10 @@
     requestAnimationFrame(animate);
     var dt = Math.min(clock.getDelta(), 0.05);
     var t = clock.elapsedTime;
+
+    // a real pause: bail out before anything advances, but keep drawing so the
+    // overlay sits over a frozen frame instead of a black canvas
+    if (state === STATE.PAUSED) { renderer.render(scene, camera); return; }
 
     for (var ci = 0; ci < clouds.length; ci++) {
       var cloud = clouds[ci];
@@ -1520,7 +1588,11 @@
   }
 
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) clock.getDelta();   // drop the paused time
+    // rAF is already frozen while hidden, so no lives are lost in the background;
+    // pausing means a child who wanders off comes back to a stopped game rather
+    // than to bubbles already escaping
+    if (document.hidden) pauseGame();
+    else clock.getDelta();                    // drop the paused time
   });
 
   animate();

@@ -33,6 +33,25 @@ node serve.js
 - Spawn rate and rise speed ramp up the longer you survive.
 - Best score is kept in `localStorage`.
 
+## Controls
+
+| | |
+| --- | --- |
+| Pop a bubble | Tap or click it |
+| Pause | The button at the top of the screen, or `Esc` / `P` |
+| Resume | The Resume button, or `Esc` / `P` again |
+| Back to the arcade | "Home" on the pause screen, "More games" on the start and game-over screens |
+
+Pausing freezes the whole scene: `animate()` renders the frame and returns before
+anything advances, so bubbles, clouds and the cat all stop rather than drifting on behind
+the overlay. Leaving the tab pauses too — `requestAnimationFrame` is already frozen while
+the page is hidden so no lives are lost, but without the pause a child who wandered off
+would come back mid-flight with bubbles about to escape.
+
+The pause button is hidden outside play (`.hud.playing`), since there is nothing to pause
+on the menu or the game-over screen. It also has to set `pointer-events: auto`: the HUD
+turns pointers off so taps fall through to the bubbles behind it.
+
 ## What's in the scene
 
 - Cartoon park: rolling hills, a winding path, ten swaying trees, bushes, scattered
