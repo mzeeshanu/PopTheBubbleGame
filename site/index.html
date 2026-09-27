@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8fd4f5">
+<meta name="description" content="A little arcade of simple games to play on a phone or tablet.">
+<title>Sofiarcade</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --sky:#8fd4f5; --sky-deep:#5cb4e0;
+    --ink:#28455e; --leaf:#3d5a2a;
+    --sun:#ffb03a; --sun-deep:#ff7a2f; --sun-shadow:#d2551a;
+    --card:rgba(255,255,255,.82);
+  }
+  /* the gradient lives on html, not body: body only grows as tall as the cards,
+     which leaves a hard seam where the gradient stops on a short page */
+  html { -webkit-text-size-adjust:100%; min-height:100%;
+    background:var(--sky) radial-gradient(circle at 50% -10%, #d3f0ff, var(--sky) 60%, var(--sky-deep)) no-repeat;
+    background-attachment:fixed; }
+  body { min-height:100%; color:var(--ink);
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    -webkit-tap-highlight-color:transparent; }
+
+  .wrap { max-width:940px; margin:0 auto;
+    padding:calc(env(safe-area-inset-top) + 40px) 16px calc(env(safe-area-inset-bottom) + 48px); }
+
+  header { text-align:center; margin-bottom:34px; }
+  h1 { font-size:clamp(42px,11vw,82px); font-weight:900; color:#fff; line-height:.95; letter-spacing:-.02em;
+    text-shadow:0 5px 0 var(--sun-deep), 0 10px 0 rgba(0,0,0,.12), 0 18px 30px rgba(0,0,0,.26); }
+  .tagline { margin:18px auto 0; max-width:24em; font-size:clamp(15px,4.2vw,20px); font-weight:700;
+    line-height:1.45; background:var(--card); padding:12px 20px; border-radius:20px; }
+
+  .games { list-style:none; display:grid; gap:18px;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); }
+
+  .game a { display:flex; flex-direction:column; gap:10px; height:100%; text-decoration:none; color:inherit;
+    background:var(--card); border-radius:26px; padding:22px 24px 24px;
+    box-shadow:0 6px 0 rgba(90,120,60,.22), 0 14px 28px rgba(0,0,0,.14);
+    transition:transform .12s, box-shadow .12s; }
+  .game a:hover, .game a:focus-visible { transform:translateY(-3px);
+    box-shadow:0 9px 0 rgba(90,120,60,.22), 0 18px 34px rgba(0,0,0,.18); outline:none; }
+  .game a:active { transform:translateY(3px);
+    box-shadow:0 2px 0 rgba(90,120,60,.22), 0 6px 14px rgba(0,0,0,.14); }
+
+  .emoji { font-size:44px; line-height:1; }
+  .name { font-size:clamp(22px,5.4vw,28px); font-weight:900; color:var(--leaf); }
+  .blurb { font-size:15px; font-weight:600; line-height:1.4; opacity:.78; }
+  .play { margin-top:auto; align-self:flex-start; font-weight:900; font-size:15px; color:#fff;
+    background:linear-gradient(var(--sun),var(--sun-deep)); padding:9px 24px; border-radius:999px;
+    box-shadow:0 4px 0 var(--sun-shadow); }
+
+  .soon a { pointer-events:none; }
+  .soon .play { background:#b9c6b2; box-shadow:0 4px 0 #94a38d; }
+  .soon .emoji, .soon .name, .soon .blurb { opacity:.55; }
+
+  footer { margin-top:38px; text-align:center; font-size:14px; font-weight:700; color:var(--ink); opacity:.6; }
+
+  @media (prefers-reduced-motion:reduce) { .game a { transition:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Sofiarcade</h1>
+    <p class="tagline">A little arcade of simple games. Best on a phone or tablet &mdash; just tap and play.</p>
+  </header>
+
+  <!-- Add a game: copy one <li>, point href at its folder, drop the "soon" class. -->
+  <ul class="games">
+    <li class="game">
+      <a href="/bubble-cat/">
+        <span class="emoji" aria-hidden="true">🐱</span>
+        <span class="name">Bubble Cat</span>
+        <span class="blurb">Mochi blows bubbles in the park. Pop them before they float away.</span>
+        <span class="play">Play</span>
+      </a>
+    </li>
+    <li class="game soon">
+      <a aria-disabled="true">
+        <span class="emoji" aria-hidden="true">✨</span>
+        <span class="name">Next game</span>
+        <span class="blurb">Something new is being built.</span>
+        <span class="play">Soon</span>
+      </a>
+    </li>
+  </ul>
+
+  <footer>Made for Sofia.</footer>
+</div>
+</body>
+</html>

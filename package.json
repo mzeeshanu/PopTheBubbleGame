@@ -1,8 +1,8 @@
 {
-  "name": "pop-the-bubble-game",
+  "name": "sofiarcade",
   "version": "1.0.0",
   "private": true,
-  "description": "A 3D tap-the-bubbles game. Mochi the cat blows bubbles in a cartoon park; pop them before they float away.",
+  "description": "Sofiarcade - a little arcade of simple browser games, one folder per game under site/.",
   "main": "serve.js",
   "scripts": {
     "start": "node serve.js"

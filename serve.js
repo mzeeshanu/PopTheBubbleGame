@@ -1,4 +1,7 @@
-// Static file server for the game.
+// Static file server for the Sofiarcade site.
+//
+// The web root is site/, which holds the landing page and one folder per game,
+// so a game at site/bubble-cat/ is served at /bubble-cat/.
 //
 // Doubles as the production server on Railway: it binds to the port Railway
 // hands us through $PORT and listens on 0.0.0.0, not just localhost, because a
@@ -8,7 +11,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, 'bubble-cat');
+const ROOT = path.join(__dirname, 'site');
 const PORT = process.env.PORT || 5178;
 const HOST = '0.0.0.0';
 
@@ -21,18 +24,25 @@ const TYPES = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.webp': 'image/webp',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.woff2': 'font/woff2',
   '.ico': 'image/x-icon'
 };
 
 const server = http.createServer((req, res) => {
-  let rel = decodeURIComponent(req.url.split('?')[0]);
-  if (rel === '/') rel = '/index.html';
+  const rel = decodeURIComponent(req.url.split('?')[0]);
 
-  const file = path.join(ROOT, path.normalize(rel).replace(/^([\\/])+/, ''));
-  if (!file.startsWith(ROOT)) {           // no escaping the web root
-    res.writeHead(403).end('forbidden');
+  const target = path.join(ROOT, path.normalize(rel).replace(/^([\/])+/, ''));
+  if (target !== ROOT && !target.startsWith(ROOT + path.sep)) {  // no escaping the web root
+    res.writeHead(403, { 'Content-Type': 'text/plain' }).end('forbidden');
     return;
   }
+
+  // "/" and "/bubble-cat" both mean that folder's index.html, so the landing
+  // page and every game get a clean URL with no filename in it
+  let file = target;
+  if (rel.endsWith('/') || isDir(target)) file = path.join(target, 'index.html');
 
   fs.readFile(file, (err, buf) => {
     if (err) {
@@ -42,16 +52,20 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(file);
     res.writeHead(200, {
       'Content-Type': TYPES[ext] || 'application/octet-stream',
-      // the game is one file and changes on every deploy, so never let a proxy
-      // or browser hold on to a stale copy of it
+      // the games are single files that change on every deploy, so never let a
+      // proxy or browser hold on to a stale copy of one
       'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
     });
     res.end(buf);
   });
 });
 
+function isDir(p) {
+  try { return fs.statSync(p).isDirectory(); } catch { return false; }
+}
+
 server.listen(PORT, HOST, () => {
-  console.log(`Bubble Cat serving on http://${HOST}:${PORT}`);
+  console.log(`Sofiarcade serving on http://${HOST}:${PORT}`);
 });
 
 // Railway stops containers with SIGTERM; exit cleanly so deploys roll over fast

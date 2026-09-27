@@ -1,0 +1,9 @@
+# Cloudflare Pages / Netlify header rules.
+# Games are single HTML files that change on every deploy, so they must never be
+# served from a stale cache; static assets beside them can be held for an hour.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+
+/*.html
+  Cache-Control: no-cache
