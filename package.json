@@ -1,0 +1,14 @@
+{
+  "name": "pop-the-bubble-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A 3D tap-the-bubbles game. Mochi the cat blows bubbles in a cartoon park; pop them before they float away.",
+  "main": "serve.js",
+  "scripts": {
+    "start": "node serve.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#8fd4f5">
+<title>Bubble Cat</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#8fd4f5;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;
+    touch-action:none; overscroll-behavior:none;
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; width:100%; height:100%; }
+
+  .hud { position:fixed; top:0; left:0; right:0; padding:calc(env(safe-area-inset-top) + 14px) 18px 0;
+    display:flex; align-items:flex-start; justify-content:space-between; pointer-events:none; z-index:10; }
+  .pill { background:rgba(255,255,255,.78); border-radius:999px; padding:8px 18px;
+    box-shadow:0 4px 0 rgba(90,120,60,.25), 0 8px 18px rgba(0,0,0,.12);
+    color:#3d5a2a; font-weight:800; font-size:clamp(16px,4.4vw,26px); letter-spacing:.5px;
+    display:flex; align-items:center; gap:8px; }
+  .pill small { font-size:.62em; opacity:.65; font-weight:700; }
+  #score { min-width:3.5em; justify-content:center; }
+  #lives { gap:4px; padding:8px 14px; }
+  .heart { width:.95em; height:.95em; display:inline-block;
+    background:#ff6b8a; clip-path:polygon(50% 100%,0 40%,10% 14%,32% 10%,50% 28%,68% 10%,90% 14%,100% 40%);
+    transition:transform .2s, opacity .2s; }
+  .heart.gone { opacity:.22; transform:scale(.72); background:#7d8a74; }
+
+  #combo { position:fixed; left:50%; top:calc(env(safe-area-inset-top) + 74px); transform:translateX(-50%) scale(.6);
+    z-index:10; pointer-events:none; color:#fff; font-weight:900; font-size:clamp(18px,5vw,30px);
+    text-shadow:0 3px 0 #ff8a3d, 0 6px 14px rgba(0,0,0,.25); opacity:0; transition:opacity .18s, transform .18s; }
+  #combo.show { opacity:1; transform:translateX(-50%) scale(1); }
+
+  .overlay { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:22px; text-align:center; padding:28px;
+    background:radial-gradient(circle at 50% 42%, rgba(255,255,255,.35), rgba(60,110,150,.55));
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+  .overlay.hidden { display:none; }
+  .title { font-size:clamp(40px,12vw,84px); font-weight:900; color:#fff; line-height:.95;
+    text-shadow:0 5px 0 #ff9a4d, 0 10px 0 rgba(0,0,0,.12), 0 18px 30px rgba(0,0,0,.28); }
+  .sub { font-size:clamp(15px,4.2vw,22px); color:#28455e; font-weight:700; max-width:22em; line-height:1.45;
+    background:rgba(255,255,255,.7); padding:12px 20px; border-radius:20px; }
+  .btn { border:none; cursor:pointer; font-family:inherit; font-weight:900;
+    font-size:clamp(20px,5.5vw,30px); color:#fff; padding:16px 46px; border-radius:999px;
+    background:linear-gradient(#ffb03a,#ff7a2f); box-shadow:0 7px 0 #d2551a, 0 14px 26px rgba(0,0,0,.28);
+    transition:transform .08s, box-shadow .08s; }
+  .btn:active { transform:translateY(5px); box-shadow:0 2px 0 #d2551a, 0 6px 14px rgba(0,0,0,.25); }
+  .final { font-size:clamp(20px,5.5vw,30px); color:#fff; font-weight:800; text-shadow:0 3px 8px rgba(0,0,0,.3); }
+  .final b { font-size:1.9em; display:block; line-height:1.1; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="hud">
+  <div class="pill" id="score"><small>SCORE</small><span id="scoreVal">0</span></div>
+  <div class="pill" id="lives"></div>
+</div>
+<div id="combo"></div>
+
+<div class="overlay" id="startScreen">
+  <div class="title">Bubble<br>Cat</div>
+  <div class="sub">Mochi is blowing bubbles in the park!<br>Tap them before they float away. &#129770;</div>
+  <button class="btn" id="playBtn">Play</button>
+</div>
+
+<div class="overlay hidden" id="overScreen">
+  <div class="title">Nice!</div>
+  <div class="final">Bubbles popped<b id="finalScore">0</b></div>
+  <div class="sub" id="bestLine">Best: 0</div>
+  <button class="btn" id="againBtn">Play again</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------- setup
+  var app = document.getElementById('app');
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  app.appendChild(renderer.domElement);
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0xbfe6f7, 28, 90);
+
+  var camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+
+  // ---------------------------------------------------------------- sky
+  function skyTexture() {
+    var c = document.createElement('canvas');
+    c.width = 8; c.height = 256;
+    var ctx = c.getContext('2d');
+    var g = ctx.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0.00, '#3aa6dd');
+    g.addColorStop(0.45, '#8fd4f5');
+    g.addColorStop(0.78, '#cdeefb');
+    g.addColorStop(1.00, '#f2f8dd');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 8, 256);
+    var t = new THREE.CanvasTexture(c);
+    if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+  var sky = new THREE.Mesh(
+    new THREE.SphereGeometry(100, 24, 16),
+    new THREE.MeshBasicMaterial({ map: skyTexture(), side: THREE.BackSide, depthWrite: false, fog: false })
+  );
+  scene.add(sky);
+
+  // ---------------------------------------------------------------- light
+  scene.add(new THREE.HemisphereLight(0xdff3ff, 0x6b9a4a, 0.88));
+  var sun = new THREE.DirectionalLight(0xfff3d6, 1.3);
+  sun.position.set(-9, 16, 8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  var sc = sun.shadow.camera;
+  sc.left = -18; sc.right = 18; sc.top = 18; sc.bottom = -12; sc.near = 1; sc.far = 50;
+  scene.add(sun);
+
+  // cool rim from behind, so the cat's edge catches light and lifts off the park
+  var rim = new THREE.DirectionalLight(0xbfe4ff, 0.38);
+  rim.position.set(7, 6, -9);
+  scene.add(rim);
+
+  // ------------------------------------------------------------ materials
+  function flat(color) { return new THREE.MeshLambertMaterial({ color: color }); }
+
+  // Cel shading (MeshToonMaterial) was tried here and removed: at this camera
+  // distance the crisp bands flattened the cat into one orange mass and lost the
+  // rounded forms. Smooth Lambert plus the rim light below reads better.
+  var MAT = {
+    grass:  flat(0x7cc24e),
+    grass2: flat(0x6bb043),
+    path:   flat(0xe3cf9c),
+    trunk:  flat(0x8b5a35),
+    leafA:  flat(0x4fa03c),
+    leafB:  flat(0x3f8c34),
+    leafC:  flat(0x66b84a),
+    hill:   flat(0x8ccc5a),
+    hillFar:flat(0x9fd6a0),
+    cloud:  new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9fc6de }),
+    fur:    flat(0xf6a94f),
+    furDark:flat(0xdb8833),
+    cream:  flat(0xfff3dd),
+    pink:   flat(0xff9bb0),
+    dark:   flat(0x2e2a33),
+    wand:   flat(0xf2f4fb),
+    soap:   new THREE.MeshLambertMaterial({ color: 0x9fe8ff, transparent: true, opacity: .55 }),
+    bench:  flat(0xb5763f),
+    metal:  flat(0x6c7a86)
+  };
+
+  var world = new THREE.Group();
+  scene.add(world);
+
+  // ---------------------------------------------------------------- ground
+  var ground = new THREE.Mesh(new THREE.CircleGeometry(60, 40), MAT.grass);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  world.add(ground);
+
+  for (var i = 0; i < 14; i++) {
+    var patch = new THREE.Mesh(new THREE.CircleGeometry(2 + Math.random() * 4, 12), MAT.grass2);
+    patch.rotation.x = -Math.PI / 2;
+    var pa = Math.random() * Math.PI * 2, pr = 5 + Math.random() * 22;
+    patch.position.set(Math.cos(pa) * pr, 0.01 + Math.random() * 0.01, Math.sin(pa) * pr);
+    world.add(patch);
+  }
+
+  var path = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 70), MAT.path);
+  path.rotation.x = -Math.PI / 2;
+  path.rotation.z = 0.28;
+  path.position.set(2.5, 0.03, -12);
+  world.add(path);
+
+  function hill(x, z, r, h, mat) {
+    var m = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat);
+    m.scale.y = h / r;
+    m.position.set(x, -0.2, z);
+    world.add(m);
+  }
+  hill(-20, -30, 13, 6, MAT.hill);
+  hill(12, -36, 16, 8, MAT.hill);
+  hill(34, -30, 11, 5, MAT.hillFar);
+  hill(-40, -38, 15, 7, MAT.hillFar);
+
+  function tree(x, z, s, leafMat) {
+    var g = new THREE.Group();
+    var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.42, 2.6, 8), MAT.trunk);
+    tr.position.y = 1.3; tr.castShadow = true; g.add(tr);
+    var blobs = [[0, 3.3, 0, 1.7], [-1.1, 2.8, .4, 1.15], [1.05, 2.9, -.35, 1.2], [.2, 4.3, .5, 1.05]];
+    for (var k = 0; k < blobs.length; k++) {
+      var b = blobs[k];
+      var m = new THREE.Mesh(new THREE.SphereGeometry(b[3], 12, 10), leafMat);
+      m.position.set(b[0], b[1], b[2]);
+      m.castShadow = true;
+      g.add(m);
+    }
+    g.position.set(x, 0, z);
+    g.scale.setScalar(s);
+    g.rotation.y = Math.random() * 6.28;
+    world.add(g);
+    return g;
+  }
+  var trees = [
+    tree(-9.5, -4, 1.25, MAT.leafA), tree(-14, -11, 1.6, MAT.leafB),
+    tree(10.5, -6, 1.35, MAT.leafC), tree(15.5, -13, 1.7, MAT.leafA),
+    tree(-20, -18, 1.9, MAT.leafB), tree(21, -20, 1.8, MAT.leafB),
+    tree(-5, -24, 1.5, MAT.leafC), tree(4, -28, 1.6, MAT.leafA),
+    tree(-27, -12, 1.5, MAT.leafA), tree(27, -9, 1.4, MAT.leafC)
+  ];
+
+  for (var b2 = 0; b2 < 16; b2++) {
+    var bush = new THREE.Group();
+    for (var q = 0; q < 3; q++) {
+      var bm = new THREE.Mesh(new THREE.SphereGeometry(0.55 + Math.random() * .35, 10, 8),
+        q % 2 ? MAT.leafB : MAT.leafC);
+      bm.position.set((q - 1) * .6, .35 + Math.random() * .2, Math.random() * .3);
+      bm.castShadow = true;
+      bush.add(bm);
+    }
+    var ba = Math.random() * Math.PI * 2, br = 8 + Math.random() * 20;
+    bush.position.set(Math.cos(ba) * br, 0, -2 - Math.abs(Math.sin(ba)) * br);
+    world.add(bush);
+  }
+
+  var FLOWER_COLORS = [0xff6b8a, 0xffe066, 0xff9de0, 0xffffff];
+  for (var f = 0; f < 40; f++) {
+    var fl = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 5), flat(FLOWER_COLORS[f % 4]));
+    var fa = Math.random() * Math.PI * 2, fr = 4 + Math.random() * 16;
+    fl.position.set(Math.cos(fa) * fr, 0.12, -1 + Math.sin(fa) * fr * .7);
+    world.add(fl);
+  }
+
+  (function bench() {
+    var g = new THREE.Group();
+    var seat = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.16, 1.1), MAT.bench);
+    seat.position.y = 0.72; seat.castShadow = true; g.add(seat);
+    var back = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.9, 0.14), MAT.bench);
+    back.position.set(0, 1.2, -0.48); back.castShadow = true; g.add(back);
+    [-1.5, 1.5].forEach(function (x) {
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.72, 0.9), MAT.metal);
+      leg.position.set(x, 0.36, 0); g.add(leg);
+    });
+    g.position.set(6.5, 0, -3.5);
+    g.rotation.y = -0.5;
+    world.add(g);
+  })();
+
+  var clouds = [];
+  for (var c2 = 0; c2 < 9; c2++) {
+    var cl = new THREE.Group();
+    var n = 3 + (c2 % 3);
+    for (var s2 = 0; s2 < n; s2++) {
+      var cm = new THREE.Mesh(new THREE.SphereGeometry(1.5 + Math.random() * 1.3, 10, 8), MAT.cloud);
+      cm.position.set((s2 - n / 2) * 1.9, Math.random() * .8, Math.random() * 1.2);
+      cl.add(cm);
+    }
+    cl.position.set(-45 + Math.random() * 90, 13 + Math.random() * 12, -30 - Math.random() * 35);
+    cl.scale.setScalar(0.8 + Math.random());
+    cl.userData.speed = 0.25 + Math.random() * 0.4;
+    scene.add(cl);
+    clouds.push(cl);
+  }
+
+  // ------------------------------------------------------------------ cat
+  var cat = new THREE.Group();
+  var catParts = { puff: 0, blinkTimer: 0, wave: 0 };
+
+  // a limb bone: origin sits at the joint, the meat hangs down -Y so that
+  // rotating the group swings the whole limb from its socket
+  function bone(len, rTop, rBot, mat) {
+    var g = new THREE.Group();
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, len, 10), mat);
+    m.position.y = -len / 2;
+    m.castShadow = true;
+    g.add(m);
+    // rounded cap at the joint so bends never show a seam
+    var cap = new THREE.Mesh(new THREE.SphereGeometry(rTop, 10, 8), mat);
+    g.add(cap);
+    g.userData.len = len;
+    return g;
+  }
+
+  function buildCat3D() {
+    // ---- torso: pear-shaped, wider at the base so they sit rather than float
+    var hips = new THREE.Mesh(new THREE.SphereGeometry(0.94, 20, 16), MAT.fur);
+    hips.scale.set(1.05, 0.85, 1);
+    hips.position.y = 0.82;
+    hips.castShadow = true;
+    cat.add(hips);
+
+    var chest = new THREE.Mesh(new THREE.SphereGeometry(0.82, 20, 16), MAT.fur);
+    chest.scale.set(1, 1.02, 0.95);
+    chest.position.set(0, 1.62, 0.06);
+    chest.castShadow = true;
+    cat.add(chest);
+
+    var belly = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 14), MAT.cream);
+    belly.scale.set(0.92, 1.18, 0.55);
+    belly.position.set(0, 1.2, 0.64);
+    cat.add(belly);
+
+    var tuft = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), MAT.cream);
+    tuft.scale.set(1.1, 0.7, 0.6);
+    tuft.position.set(0, 1.92, 0.58);
+    cat.add(tuft);
+
+    // neck ruff: hides the head/chest seam and gives the shoulders some fluff
+    for (var rf = 0; rf < 9; rf++) {
+      var a = (rf / 9) * Math.PI * 2;
+      var ruff = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.36, 8), MAT.fur);
+      ruff.position.set(Math.sin(a) * 0.62, 2.16, Math.cos(a) * 0.5 + 0.04);
+      ruff.rotation.set(Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9);
+      ruff.castShadow = true;
+      cat.add(ruff);
+    }
+
+    // fur along the silhouette: tufts fanned round the outline of the body so
+    // the edge against the sky is ragged rather than a clean arc
+    for (var fz = 0; fz < 22; fz++) {
+      var ang = (fz / 22) * Math.PI * 2;
+      var out = 0.98 + Math.random() * 0.06;
+      var fur = new THREE.Mesh(new THREE.ConeGeometry(0.15 + Math.random() * 0.05, 0.3, 7), MAT.fur);
+      fur.position.set(Math.sin(ang) * out, 1.0 + Math.cos(ang) * 0.82, -0.12);
+      fur.rotation.z = -ang;
+      fur.castShadow = true;
+      cat.add(fur);
+    }
+
+    // tabby stripes over the back and haunches
+    for (var bs = 0; bs < 5; bs++) {
+      var band = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), MAT.furDark);
+      band.scale.set(1.6, 0.34, 0.5);
+      band.position.set(0, 1.62 - bs * 0.3, -0.72 + bs * 0.06);
+      band.rotation.x = 0.3;
+      cat.add(band);
+    }
+
+    // ---- hind legs: haunch + foot, so the body is planted on the grass
+    [-1, 1].forEach(function (side) {
+      var haunch = new THREE.Mesh(new THREE.SphereGeometry(0.46, 14, 12), MAT.furDark);
+      haunch.scale.set(0.75, 1, 1.05);
+      haunch.position.set(side * 0.82, 0.62, 0.1);
+      haunch.castShadow = true;
+      cat.add(haunch);
+
+      var foot = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), MAT.fur);
+      foot.scale.set(0.8, 0.5, 1.35);
+      foot.position.set(side * 0.72, 0.16, 0.66);
+      foot.castShadow = true;
+      cat.add(foot);
+
+      for (var tb = -1; tb <= 1; tb++) {          // toe beans
+        var bean = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), MAT.pink);
+        bean.scale.set(1, 0.6, 1);
+        bean.position.set(side * 0.72 + tb * 0.13, 0.28, 0.98);
+        cat.add(bean);
+      }
+    });
+
+    // ---- collar + bell
+    var collar = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.085, 8, 24), flat(0xe0574f));
+    collar.position.set(0, 1.98, 0.06);
+    collar.rotation.x = Math.PI / 2 - 0.14;
+    collar.castShadow = true;
+    cat.add(collar);
+    var bell = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), flat(0xffd34d));
+    bell.position.set(0, 1.84, 0.76);
+    bell.castShadow = true;
+    cat.add(bell);
+    catParts.bell = bell;
+
+    // ---- head
+    var head = new THREE.Group();
+    head.position.set(0, 2.8, 0.1);
+    cat.add(head);
+    catParts.head = head;
+
+    // A cat skull is wider than it is deep, and flat at the front — the moment
+    // the face grows a protruding snout it starts reading as a dog.
+    var skull = new THREE.Mesh(new THREE.SphereGeometry(0.86, 22, 18), MAT.fur);
+    skull.scale.set(1.14, 0.94, 0.88);
+    skull.castShadow = true;
+    head.add(skull);
+
+    // narrow wedge chin, set back — cats taper to a small jaw
+    var jaw = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 12), MAT.fur);
+    jaw.scale.set(0.86, 0.66, 0.78);
+    jaw.position.set(0, -0.44, 0.34);
+    head.add(jaw);
+
+    // cheek floof: overlapping tufts down the sides of the face, so the
+    // silhouette is furry rather than a clean sphere
+    [-1, 1].forEach(function (side) {
+      for (var cf = 0; cf < 3; cf++) {
+        var floof = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.34, 8), MAT.fur);
+        floof.position.set(side * 0.72, 0.05 - cf * 0.26, 0.16 + cf * 0.06);
+        floof.rotation.set(0.2, 0, side * (2.1 + cf * 0.22));
+        head.add(floof);
+      }
+    });
+
+    // forehead stripes (tabby "M")
+    for (var st = -1; st <= 1; st++) {
+      var stripe = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), MAT.furDark);
+      stripe.scale.set(0.5, 0.32, 1);
+      stripe.position.set(st * 0.22, 0.6, 0.44);
+      stripe.rotation.z = st * 0.3;
+      head.add(stripe);
+    }
+
+    // ---- ears: tall, upright and set close together on top of the skull.
+    // Big ears are most of what makes a round head read "cat".
+    //
+    // The base is sunk well inside the skull and a fur blob is packed around it,
+    // otherwise the cone meets the round head at a hard edge and the ear looks
+    // stuck on rather than grown out of the head.
+    catParts.ears = [];
+    [-1, 1].forEach(function (side) {
+      var ear = new THREE.Group();
+      ear.position.set(side * 0.42, 0.38, -0.02);
+      ear.rotation.z = side * 0.17;
+      head.add(ear);
+      catParts.ears.push(ear);
+
+      // smooth flattened cone — 16 segments, not a 4-sided pyramid
+      var shell = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.92, 16), MAT.fur);
+      shell.position.y = 0.4;
+      shell.rotation.x = 0.1;
+      shell.scale.z = 0.52;                       // flat, not a horn
+      shell.castShadow = true;
+      ear.add(shell);
+
+      // the blend: a fur lump swallowing the cone's base into the skull
+      var root = new THREE.Mesh(new THREE.SphereGeometry(0.29, 14, 12), MAT.fur);
+      root.scale.set(1.05, 0.8, 0.72);
+      root.position.y = 0.02;
+      ear.add(root);
+
+      var inner = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.62, 16), MAT.pink);
+      inner.position.set(0, 0.42, 0.07);
+      inner.rotation.x = 0.1;
+      inner.scale.z = 0.36;
+      ear.add(inner);
+
+      // wispy tufts of fur poking out of the ear canal
+      for (var tf = -1; tf <= 1; tf++) {
+        var tuft = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.22, 6), MAT.cream);
+        tuft.position.set(tf * 0.09, 0.38, 0.1);
+        tuft.rotation.set(0.25, 0, tf * 0.45);
+        ear.add(tuft);
+      }
+    });
+
+    // ---- eyes: big almond shapes with a vertical slit pupil
+    catParts.eyes = [];
+    catParts.brows = [];
+    [-1, 1].forEach(function (side) {
+      var eye = new THREE.Group();
+      eye.position.set(side * 0.34, 0.14, 0.62);
+      eye.rotation.z = side * -0.12;              // outer corner tilts up
+      head.add(eye);
+      catParts.eyes.push(eye);
+
+      var white = new THREE.Mesh(new THREE.SphereGeometry(0.23, 14, 12),
+        new THREE.MeshLambertMaterial({ color: 0xfdfdff }));
+      white.scale.set(1, 0.82, 0.5);
+      eye.add(white);
+
+      // the iris nearly fills the eye, the way a cat's does
+      var iris = new THREE.Mesh(new THREE.SphereGeometry(0.175, 14, 12), flat(0x7ed46f));
+      iris.position.z = 0.09;
+      iris.scale.set(1, 0.92, 0.3);
+      eye.add(iris);
+
+      var pupil = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), MAT.dark);
+      pupil.position.z = 0.13;
+      pupil.scale.set(0.3, 1.02, 0.25);           // vertical slit
+      eye.add(pupil);
+
+      var glint = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      glint.position.set(side * 0.07, 0.09, 0.17);
+      eye.add(glint);
+
+      var brow = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.026, 6, 10, Math.PI * 0.7), MAT.furDark);
+      brow.position.set(side * 0.34, 0.42, 0.6);
+      brow.rotation.z = side * 0.3;
+      head.add(brow);
+      catParts.brows.push(brow);
+    });
+
+    // ---- muzzle: two shallow whisker pads, barely proud of the face,
+    // instead of one long snout
+    catParts.pads = [];
+    [-1, 1].forEach(function (side) {
+      var pad = new THREE.Mesh(new THREE.SphereGeometry(0.21, 14, 12), MAT.cream);
+      pad.scale.set(1, 0.82, 0.62);
+      pad.position.set(side * 0.16, -0.28, 0.66);
+      head.add(pad);
+      catParts.pads.push(pad);
+    });
+
+    // triangular pink nose, sitting high between the pads
+    var nose = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.13, 3), MAT.pink);
+    nose.position.set(0, -0.13, 0.78);
+    nose.rotation.set(Math.PI / 2, 0, Math.PI);   // flat triangle, point down
+    nose.scale.z = 0.6;
+    head.add(nose);
+
+    // the cat "w": two small arcs under the nose
+    [-1, 1].forEach(function (side) {
+      var lip = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.018, 6, 10, Math.PI), MAT.dark);
+      lip.position.set(side * 0.072, -0.27, 0.8);
+      lip.rotation.z = Math.PI;
+      head.add(lip);
+    });
+
+    // mouth: a small "o" that opens when blowing
+    var mouth = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), flat(0x8c4a55));
+    mouth.position.set(0, -0.34, 0.76);
+    mouth.scale.set(0.9, 0.7, 0.5);
+    head.add(mouth);
+    catParts.mouth = mouth;
+
+    catParts.cheeks = [];
+    [-1, 1].forEach(function (side) {
+      var ch = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10),
+        new THREE.MeshLambertMaterial({ color: 0xff9bb0, transparent: true, opacity: 0.5 }));
+      ch.position.set(side * 0.56, -0.16, 0.5);
+      ch.scale.set(1, 0.75, 0.4);
+      head.add(ch);
+      catParts.cheeks.push(ch);
+    });
+
+    // long whiskers fanning off the pads
+    [-1, 1].forEach(function (side) {
+      for (var w = 0; w < 3; w++) {
+        var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.92, 4), MAT.dark);
+        wh.position.set(side * 0.58, -0.26 + w * 0.09, 0.66);
+        wh.rotation.set(0, side * 0.3, side * (Math.PI / 2 - 0.3 + w * 0.26));
+        head.add(wh);
+      }
+    });
+
+    // ---- tail
+    var tail = new THREE.Group();
+    tail.position.set(0.78, 0.78, -0.62);
+    tail.rotation.z = -0.35;
+    cat.add(tail);
+    catParts.tailSegs = [];
+    var parent = tail;
+    for (var t = 0; t < 7; t++) {
+      var seg = new THREE.Group();
+      seg.position.y = t === 0 ? 0 : 0.28;
+      var m = new THREE.Mesh(new THREE.SphereGeometry(0.21 - t * 0.017, 10, 8), t % 2 ? MAT.furDark : MAT.fur);
+      m.position.y = 0.14;
+      m.castShadow = true;
+      seg.add(m);
+      parent.add(seg);
+      parent = seg;
+      catParts.tailSegs.push(seg);
+    }
+
+    // ---- arms: shoulder -> upper arm -> elbow -> forearm -> paw
+    function buildArm(side) {
+      var shoulder = new THREE.Group();
+      shoulder.position.set(side * 0.74, 1.92, 0.18);
+      cat.add(shoulder);
+
+      var upper = bone(0.62, 0.19, 0.16, MAT.fur);
+      shoulder.add(upper);
+
+      var elbow = new THREE.Group();
+      elbow.position.y = -0.62;
+      upper.add(elbow);
+
+      var fore = bone(0.52, 0.16, 0.14, MAT.fur);
+      elbow.add(fore);
+
+      var wrist = new THREE.Group();
+      wrist.position.y = -0.52;
+      fore.add(wrist);
+
+      var paw = new THREE.Mesh(new THREE.SphereGeometry(0.21, 12, 10), MAT.cream);
+      paw.scale.set(1, 0.92, 1.05);
+      paw.castShadow = true;
+      wrist.add(paw);
+
+      for (var tz = -1; tz <= 1; tz++) {        // little toes on the paw
+        var toe = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), MAT.cream);
+        toe.position.set(tz * 0.1, -0.13, 0.12);
+        wrist.add(toe);
+      }
+
+      return { shoulder: shoulder, elbow: elbow, wrist: wrist };
+    }
+
+    // cat's right arm (screen left) holds the wand up in front of the face.
+    // |rotation.z| > PI/2 swings the bone past horizontal so the arm points up.
+    var armR = buildArm(-1);
+    armR.shoulder.rotation.set(-0.45, 0, -2.5);
+    armR.elbow.rotation.set(0, 0, 0.45);
+    catParts.armR = armR;
+
+    // cat's left arm rests against the belly, and waves on a combo
+    var armL = buildArm(1);
+    armL.shoulder.rotation.set(-0.5, 0, 0.42);
+    armL.elbow.rotation.set(0, 0, -0.85);
+    catParts.armL = armL;
+
+    // ---- wand, gripped by the right paw: parented to the wrist so it can
+    // never drift away from the hand no matter how the arm animates
+    // rotation.z is re-derived every frame so the wand stays upright in world
+    // space no matter how the arm swings (see the animate loop)
+    var wand = new THREE.Group();
+    armR.wrist.add(wand);
+    catParts.wand = wand;
+
+    var stick = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.05, 0.9, 8), MAT.wand);
+    stick.position.y = 0.3;                      // runs up out of the fist
+    stick.castShadow = true;
+    wand.add(stick);
+
+    var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.22, 8), flat(0x5f6b78));
+    grip.position.y = -0.02;
+    wand.add(grip);
+
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.045, 8, 22), MAT.wand);
+    ring.position.y = 0.88;
+    ring.castShadow = true;
+    wand.add(ring);
+
+    var film = new THREE.Mesh(new THREE.CircleGeometry(0.26, 20), MAT.soap);
+    film.position.y = 0.88;
+    wand.add(film);
+
+    catParts.film = film;
+    catParts.ring = ring;
+
+    cat.position.set(-2.6, 0, 1.5);
+    cat.rotation.y = 0.55;
+    cat.scale.setScalar(1.1);
+    world.add(cat);
+  }
+
+  // =================================================================== 2D cat
+  // A drawn sprite cat: frames painted once with Canvas 2D at load, then played
+  // back as a flip-book on a billboard plane in the 3D park. Flat cartoon art
+  // carries expression (puffed cheeks, an open mouth, a lifted wand) far more
+  // cheaply than sculpted geometry does.
+  var USE_SPRITE_CAT = true;
+
+  var SPRITE = {
+    frames: [], mesh: null, frame: 0, clock: 0,
+    w: 100, h: 112,                     // design units the art is drawn in
+    wandU: 0.115, wandV: 0.105,         // where the wand ring sits, 0..1 of the art
+    worldH: 4.0,                        // height of the sprite in world units
+    z: 1.5,                             // depth the sprite stands at
+    flip: true                          // mirrored, so the wand points into the play area
+  };
+
+  // the wand's horizontal spot after any mirroring
+  function wandU() { return SPRITE.flip ? 1 - SPRITE.wandU : SPRITE.wandU; }
+
+  var FUR = '#f3a950', FUR_D = '#e08f38', FUR_DD = '#c87a2c',
+      CREAM = '#fff3dd', PINK = '#ff9bb0', PINK_D = '#f47f9c',
+      INK = '#5c3316', EYE = '#3c2f2a', LEAF = '#7ed46f';
+
+  function ell(g, x, y, rx, ry, rot) {
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // p: { puff 0..1, blink 0..1, lift 0..1, bob -1..1 }
+  function drawCat2D(g, p) {
+    var bob = p.bob * 1.2;
+    var puff = p.puff;
+
+    g.clearRect(0, 0, SPRITE.w, SPRITE.h);
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+
+    // ---- ground shadow
+    g.fillStyle = 'rgba(60,90,40,0.20)';
+    ell(g, 52, 107, 30 - bob * 0.6, 5.2);
+
+    // ---- tail, curling out behind to the right
+    g.strokeStyle = FUR_D;
+    g.lineWidth = 8.5;
+    g.beginPath();
+    g.moveTo(68, 92 + bob);
+    g.bezierCurveTo(88, 92 + bob, 96, 76 + bob, 88, 62 + bob + p.lift * 1.5);
+    g.stroke();
+    g.strokeStyle = FUR_DD;                 // tail rings
+    g.lineWidth = 3;
+    [0.45, 0.68, 0.9].forEach(function (u) {
+      var x = 68 + (88 - 68) * u + Math.sin(u * 3) * 6;
+      var y = 92 + bob - (92 - 62) * u * u;
+      g.beginPath();
+      g.moveTo(x - 3, y - 3);
+      g.lineTo(x + 3, y + 3);
+      g.stroke();
+    });
+
+    // ---- body: a soft pear, wider at the base
+    g.fillStyle = FUR;
+    g.beginPath();
+    g.moveTo(28, 96 + bob);
+    g.bezierCurveTo(22, 74 + bob, 26, 58 + bob, 50, 58 + bob);
+    g.bezierCurveTo(74, 58 + bob, 78, 74 + bob, 72, 96 + bob);
+    g.bezierCurveTo(64, 101 + bob, 36, 101 + bob, 28, 96 + bob);
+    g.fill();
+
+    // belly patch
+    g.fillStyle = CREAM;
+    ell(g, 50, 84 + bob, 15, 17);
+
+    // hind feet
+    g.fillStyle = FUR;
+    ell(g, 34, 99 + bob, 9, 5.5);
+    ell(g, 66, 99 + bob, 9, 5.5);
+    g.fillStyle = PINK;
+    ell(g, 34, 99.5 + bob, 3.4, 2.1);
+    ell(g, 66, 99.5 + bob, 3.4, 2.1);
+
+    // ---- free arm resting on the belly (drawn before the head)
+    g.strokeStyle = FUR;
+    g.lineWidth = 9;
+    g.beginPath();
+    g.moveTo(70, 70 + bob);
+    g.bezierCurveTo(76, 78 + bob, 74, 86 + bob, 68, 88 + bob);
+    g.stroke();
+    g.fillStyle = CREAM;
+    ell(g, 67, 89 + bob, 5, 4.5);
+
+    // ---- raised arm + wand (fixed pose: the spawn point must not wander)
+    var armY = 52 + bob - p.lift * 2;
+    g.strokeStyle = FUR;
+    g.lineWidth = 9;
+    g.beginPath();
+    g.moveTo(31, 68 + bob);
+    g.bezierCurveTo(22, 64 + bob, 17, 58 + bob, 16, armY);
+    g.stroke();
+    g.fillStyle = CREAM;                    // paw gripping the stick
+    ell(g, 15.5, armY - 2, 5.4, 5);
+
+    g.strokeStyle = '#cfd6e2';              // wand stick
+    g.lineWidth = 2.6;
+    g.beginPath();
+    g.moveTo(15.5, armY - 3);
+    g.lineTo(11.5, 20);
+    g.stroke();
+    g.strokeStyle = '#e8edf6';              // wand ring
+    g.lineWidth = 3;
+    g.beginPath();
+    g.arc(SPRITE.wandU * SPRITE.w, SPRITE.wandV * SPRITE.h, 7, 0, Math.PI * 2);
+    g.stroke();
+    g.fillStyle = 'rgba(190,235,255,' + (0.3 + puff * 0.35) + ')';
+    g.beginPath();
+    g.arc(SPRITE.wandU * SPRITE.w, SPRITE.wandV * SPRITE.h, 6, 0, Math.PI * 2);
+    g.fill();
+
+    // ---- collar
+    g.strokeStyle = '#e0574f';
+    g.lineWidth = 5.5;
+    g.beginPath();
+    g.moveTo(35, 60 + bob);
+    g.quadraticCurveTo(50, 66 + bob, 65, 60 + bob);
+    g.stroke();
+    g.fillStyle = '#ffd34d';
+    ell(g, 50, 65 + bob, 4.2, 4.2);
+
+    // ---- head
+    var hy = 36 + bob;
+    g.fillStyle = FUR;
+
+    // ears first, so the skull overlaps their base and they read as attached
+    [[-1, 31], [1, 69]].forEach(function (e) {
+      var ex = e[1];
+      g.beginPath();
+      g.moveTo(ex - 9 * e[0], hy - 12);
+      g.quadraticCurveTo(ex + 2 * e[0], hy - 32, ex + 10 * e[0], hy - 11);
+      g.closePath();
+      g.fill();
+      g.fillStyle = PINK;
+      g.beginPath();
+      g.moveTo(ex - 5 * e[0], hy - 13);
+      g.quadraticCurveTo(ex + 1.5 * e[0], hy - 26, ex + 6 * e[0], hy - 12);
+      g.closePath();
+      g.fill();
+      g.fillStyle = FUR;
+    });
+
+    ell(g, 50, hy, 25, 22);                 // skull: wider than tall
+
+    // cheek floof
+    g.fillStyle = FUR_D;
+    ell(g, 27, hy + 6, 5, 7, -0.3);
+    ell(g, 73, hy + 6, 5, 7, 0.3);
+    g.fillStyle = FUR;
+
+    // forehead tabby stripes
+    g.strokeStyle = FUR_DD;
+    g.lineWidth = 2.4;
+    [-7, 0, 7].forEach(function (dx) {
+      g.beginPath();
+      g.moveTo(50 + dx, hy - 19);
+      g.lineTo(50 + dx * 1.5, hy - 13);
+      g.stroke();
+    });
+
+    // ---- eyes
+    var openness = 1 - p.blink;
+    [[-1, 40], [1, 60]].forEach(function (e) {
+      var ex = e[1];
+      if (openness < 0.18) {                 // closed: a happy downward arc
+        g.strokeStyle = EYE;
+        g.lineWidth = 2.6;
+        g.beginPath();
+        g.arc(ex, hy - 1, 5.2, Math.PI * 1.15, Math.PI * 1.85);
+        g.stroke();
+        return;
+      }
+      g.fillStyle = '#ffffff';
+      ell(g, ex, hy - 2, 6.4, 7.4 * openness);
+      g.fillStyle = LEAF;
+      ell(g, ex, hy - 2, 5.2, 6.2 * openness);
+      g.fillStyle = EYE;                     // slit pupil
+      ell(g, ex, hy - 2, 2.1, 5.6 * openness);
+      g.fillStyle = '#ffffff';
+      ell(g, ex + 2.2, hy - 5, 1.8, 2 * openness);
+    });
+
+    // brows lift with effort while blowing — skipped when the eyes are shut,
+    // where they would just read as a second pair of closed eyes
+    if (openness > 0.18) {
+      g.strokeStyle = FUR_DD;
+      g.lineWidth = 1.9;
+      [40, 60].forEach(function (ex) {
+        g.beginPath();
+        g.arc(ex, hy - 3 - puff * 1.8, 8.5, Math.PI * 1.22, Math.PI * 1.78);
+        g.stroke();
+      });
+    }
+
+    // ---- muzzle: whisker pads swell as the cheeks fill
+    var pw = 8 + puff * 3.6, ph = 6 + puff * 3.2;
+    g.fillStyle = CREAM;
+    ell(g, 44, hy + 11, pw, ph);
+    ell(g, 56, hy + 11, pw, ph);
+
+    // puffed cheeks pushing out past the face
+    if (puff > 0.02) {
+      g.fillStyle = 'rgba(255,155,176,' + (0.35 + puff * 0.3) + ')';
+      ell(g, 28 - puff * 2, hy + 7, 5 + puff * 4, 4.5 + puff * 3.4);
+      ell(g, 72 + puff * 2, hy + 7, 5 + puff * 4, 4.5 + puff * 3.4);
+    }
+
+    g.fillStyle = PINK_D;                    // triangular nose
+    g.beginPath();
+    g.moveTo(50, hy + 8);
+    g.lineTo(46.4, hy + 4.6);
+    g.lineTo(53.6, hy + 4.6);
+    g.closePath();
+    g.fill();
+
+    // mouth: a "w" at rest, an "o" while blowing
+    if (puff > 0.25) {
+      g.fillStyle = '#8c4a55';
+      ell(g, 50, hy + 13, 2.6 + puff * 2.4, 3 + puff * 3);
+    } else {
+      // each half of the "w" needs its own path, or the two arcs get joined
+      // by a connecting line and fill in as one dark blob
+      g.strokeStyle = EYE;
+      g.lineWidth = 1.6;
+      [47.4, 52.6].forEach(function (mx) {
+        g.beginPath();
+        g.arc(mx, hy + 9.4, 2.8, 0.12 * Math.PI, 0.88 * Math.PI);
+        g.stroke();
+      });
+    }
+
+    // whiskers
+    g.strokeStyle = 'rgba(92,51,22,0.55)';
+    g.lineWidth = 1.2;
+    [-1, 1].forEach(function (s) {
+      for (var i = 0; i < 3; i++) {
+        g.beginPath();
+        g.moveTo(50 + s * (pw + 4), hy + 9 + i * 2.2);
+        g.lineTo(50 + s * (pw + 22), hy + 4 + i * 5);
+        g.stroke();
+      }
+    });
+  }
+
+  // the blow cycle: settle, inhale, puff out a bubble, relax
+  var CAT_CYCLE = [
+    { puff: 0.00, blink: 0, lift: 0.0, bob: 0.0, hold: 0.18 },
+    { puff: 0.00, blink: 0, lift: 0.1, bob: 0.5, hold: 0.16 },
+    { puff: 0.00, blink: 1, lift: 0.2, bob: 0.8, hold: 0.12 },
+    { puff: 0.25, blink: 0, lift: 0.5, bob: 0.4, hold: 0.12 },
+    { puff: 0.70, blink: 0, lift: 0.9, bob: 0.0, hold: 0.14 },
+    { puff: 1.00, blink: 0, lift: 1.0, bob: -0.4, hold: 0.22 },
+    { puff: 0.75, blink: 0, lift: 0.7, bob: -0.2, hold: 0.14 },
+    { puff: 0.35, blink: 0, lift: 0.35, bob: 0.1, hold: 0.14 },
+    { puff: 0.10, blink: 0, lift: 0.1, bob: 0.3, hold: 0.16 },
+    { puff: 0.00, blink: 1, lift: 0.0, bob: 0.1, hold: 0.12 }
+  ];
+
+  function buildCatSprite() {
+    var PX = 6;                              // pixels per design unit
+    for (var i = 0; i < CAT_CYCLE.length; i++) {
+      var c = document.createElement('canvas');
+      c.width = SPRITE.w * PX;
+      c.height = SPRITE.h * PX;
+      var g = c.getContext('2d');
+      g.scale(PX, PX);
+      if (SPRITE.flip) {                     // mirror the whole drawing
+        g.translate(SPRITE.w, 0);
+        g.scale(-1, 1);
+      }
+      drawCat2D(g, CAT_CYCLE[i]);
+      var tex = new THREE.CanvasTexture(c);
+      if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      SPRITE.frames.push(tex);
+    }
+
+    var aspect = SPRITE.w / SPRITE.h;
+    var hgt = SPRITE.worldH;
+    var mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(hgt * aspect, hgt),
+      new THREE.MeshBasicMaterial({
+        map: SPRITE.frames[0], transparent: true,
+        alphaTest: 0.35,                     // keeps depth sorting honest vs bubbles
+        side: THREE.DoubleSide
+      })
+    );
+    // x is set by resize(), which pins the cat to the left edge of the frame
+    mesh.position.set(-2.1, hgt / 2, SPRITE.z);
+    world.add(mesh);
+    SPRITE.mesh = mesh;
+  }
+
+  function animateCatSprite(t, dt) {
+    SPRITE.clock += dt;
+    var hold = CAT_CYCLE[SPRITE.frame].hold;
+    if (SPRITE.clock >= hold) {
+      SPRITE.clock -= hold;
+      SPRITE.frame = (SPRITE.frame + 1) % CAT_CYCLE.length;
+      SPRITE.mesh.material.map = SPRITE.frames[SPRITE.frame];
+    }
+    // face the camera, but stay upright — no rolling with the camera
+    SPRITE.mesh.rotation.y = Math.atan2(
+      camera.position.x - SPRITE.mesh.position.x,
+      camera.position.z - SPRITE.mesh.position.z
+    );
+  }
+
+  // the frame where the bubble actually leaves the wand
+  var SPRITE_BLOW_FRAME = 5;
+
+  if (USE_SPRITE_CAT) buildCatSprite(); else buildCat3D();
+
+  var spawnPoint = new THREE.Vector3();
+  function updateSpawnPoint() {
+    if (!USE_SPRITE_CAT) { catParts.ring.getWorldPosition(spawnPoint); return; }
+    // the wand ring's spot in the art, mapped onto the sprite plane
+    var m = SPRITE.mesh;
+    var hgt = SPRITE.worldH, wid = hgt * (SPRITE.w / SPRITE.h);
+    spawnPoint.set((wandU() - 0.5) * wid, (0.5 - SPRITE.wandV) * hgt, 0);
+    spawnPoint.applyQuaternion(m.quaternion).add(m.position);
+  }
+
+  // -------------------------------------------------------------- bubbles
+  var BUBBLE_GEO = new THREE.SphereGeometry(1, 20, 16);
+  var SHEEN_GEO = new THREE.SphereGeometry(0.98, 16, 12);
+  var HILITE_GEO = new THREE.SphereGeometry(0.2, 10, 8);
+  var bubbles = [];
+  var bubblePool = [];
+
+  function makeBubble() {
+    var g = new THREE.Group();
+    var shell = new THREE.Mesh(BUBBLE_GEO, new THREE.MeshPhongMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.6,
+      shininess: 150, specular: 0xffffff, depthWrite: false, side: THREE.DoubleSide
+    }));
+    g.add(shell);
+    var sheen = new THREE.Mesh(SHEEN_GEO, new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.22, depthWrite: false
+    }));
+    g.add(sheen);
+    var hi = new THREE.Mesh(HILITE_GEO, new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false
+    }));
+    hi.position.set(-0.4, 0.46, 0.55);
+    g.add(hi);
+    g.userData.shell = shell;
+    return g;
+  }
+
+  var TINTS = [0x8fd8ff, 0xffb3e6, 0xa8ffcf, 0xffe98a, 0xc4aeff, 0xffb894];
+
+  function spawnBubble() {
+    updateSpawnPoint();
+    var g = bubblePool.pop() || makeBubble();
+    var r = 0.34 + Math.random() * 0.42;
+    g.scale.setScalar(0.05);
+    g.position.copy(spawnPoint);
+    var jitter = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.6);
+    var tint = TINTS[(Math.random() * TINTS.length) | 0];
+    g.userData.shell.material.color.setHex(tint);
+    // emissive keeps the tint bright instead of going muddy in shadow
+    g.userData.shell.material.emissive.setHex(tint).multiplyScalar(0.55);
+    g.visible = true;
+    scene.add(g);
+
+    var lane = Math.random() - 0.5;
+    bubbles.push({
+      obj: g,
+      r: r,
+      grow: 0,
+      jitter: jitter,
+      vy: 0.92 + Math.random() * 0.45 + level * 0.12,
+      vx: 1.05 + lane * 1.0,   // biased right, arcing away from the cat's corner
+      wobPhase: Math.random() * 6.28,
+      wobAmp: 0.18 + Math.random() * 0.3,
+      spin: (Math.random() - 0.5) * 1.2,
+      dead: false
+    });
+
+    catParts.puff = 1;
+    // snap the sprite to the blow frame so the puffed cheeks coincide with the
+    // bubble actually appearing, rather than looping on their own schedule
+    if (USE_SPRITE_CAT && SPRITE.mesh) {
+      SPRITE.frame = SPRITE_BLOW_FRAME;
+      SPRITE.clock = 0;
+      SPRITE.mesh.material.map = SPRITE.frames[SPRITE_BLOW_FRAME];
+    }
+  }
+
+  function recycle(b) {
+    scene.remove(b.obj);
+    b.obj.visible = false;
+    bubblePool.push(b.obj);
+  }
+
+  // ------------------------------------------------------------ pop burst
+  var SPRITE_TEX = (function () {
+    var c = document.createElement('canvas');
+    c.width = c.height = 64;
+    var x = c.getContext('2d');
+    var g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.4, 'rgba(255,255,255,.85)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  })();
+
+  var sparks = [];
+  var sparkPool = [];
+  function newSprite() {
+    return new THREE.Sprite(new THREE.SpriteMaterial({
+      map: SPRITE_TEX, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+    }));
+  }
+  function burst(pos, radius, colorHex) {
+    var n = 10;
+    for (var i = 0; i < n; i++) {
+      var s = sparkPool.pop() || newSprite();
+      s.material.color.setHex(colorHex);
+      s.material.opacity = 1;
+      s.position.copy(pos);
+      var size = radius * (0.35 + Math.random() * 0.4);
+      s.scale.setScalar(size);
+      s.visible = true;
+      scene.add(s);
+      var a = (i / n) * 6.28 + Math.random() * 0.5;
+      var sp = radius * (2.4 + Math.random() * 2.6);
+      sparks.push({
+        s: s, life: 1, size: size,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp + radius, vz: (Math.random() - .5) * sp
+      });
+    }
+    var ring = sparkPool.pop() || newSprite();
+    ring.material.color.setHex(0xffffff);
+    ring.material.opacity = 0.9;
+    ring.position.copy(pos);
+    ring.scale.setScalar(radius * 2);
+    ring.visible = true;
+    scene.add(ring);
+    sparks.push({ s: ring, life: 1, vx: 0, vy: 0, vz: 0, size: radius * 2, flash: true });
+  }
+
+  // ------------------------------------------------------------ score text
+  var floaters = [];
+  function floatText(text, worldPos) {
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 128;
+    var x = c.getContext('2d');
+    x.font = '900 84px "Trebuchet MS", sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 12; x.strokeStyle = 'rgba(0,0,0,.35)';
+    x.strokeText(text, 128, 64);
+    x.fillStyle = '#ffffff';
+    x.fillText(text, 128, 64);
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, depthTest: false
+    }));
+    sp.position.copy(worldPos);
+    sp.scale.set(1.6, 0.8, 1);
+    sp.renderOrder = 999;
+    scene.add(sp);
+    floaters.push({ s: sp, life: 1 });
+  }
+
+  // ----------------------------------------------------------------- audio
+  var actx = null;
+  function audio() {
+    if (!actx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) actx = new AC();
+    }
+    if (actx && actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function popSound(pitch) {
+    var a = audio(); if (!a) return;
+    var t = a.currentTime;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(240 * pitch, t);
+    o.frequency.exponentialRampToValueAtTime(880 * pitch, t + 0.07);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.28, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + 0.18);
+
+    var buf = a.createBuffer(1, 1024, a.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < 1024; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / 1024);
+    var bs = a.createBufferSource();
+    bs.buffer = buf;
+    var bg = a.createGain(); bg.gain.value = 0.09;
+    var bp = a.createBiquadFilter(); bp.type = 'highpass'; bp.frequency.value = 1800;
+    bs.connect(bp); bp.connect(bg); bg.connect(a.destination);
+    bs.start(t);
+  }
+  function missSound() {
+    var a = audio(); if (!a) return;
+    var t = a.currentTime;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(420, t);
+    o.frequency.exponentialRampToValueAtTime(130, t + 0.32);
+    g.gain.setValueAtTime(0.16, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(g); g.connect(a.destination);
+    o.start(t); o.stop(t + 0.36);
+  }
+
+  // ----------------------------------------------------------------- state
+  var STATE = { MENU: 0, PLAY: 1, OVER: 2 };
+  var state = STATE.MENU;
+  var MAX_LIVES = 5;
+  var ESCAPE_Y = 12.5;          // recomputed from the camera framing in resize()
+  var score = 0, lives = MAX_LIVES, combo = 0, level = 1;
+  var spawnTimer = 0, spawnEvery = 1.25, elapsed = 0, comboTimer = 0;
+
+  var scoreVal = document.getElementById('scoreVal');
+  var livesEl = document.getElementById('lives');
+  var comboEl = document.getElementById('combo');
+  var startScreen = document.getElementById('startScreen');
+  var overScreen = document.getElementById('overScreen');
+  var finalScore = document.getElementById('finalScore');
+  var bestLine = document.getElementById('bestLine');
+
+  function drawLives() {
+    livesEl.innerHTML = '';
+    for (var i = 0; i < MAX_LIVES; i++) {
+      var h = document.createElement('span');
+      h.className = 'heart' + (i < lives ? '' : ' gone');
+      livesEl.appendChild(h);
+    }
+  }
+
+  function showCombo(text) {
+    comboEl.textContent = text;
+    comboEl.classList.add('show');
+    comboTimer = 0.9;
+  }
+
+  function getBest() {
+    try { return parseInt(localStorage.getItem('bubblecat_best') || '0', 10) || 0; } catch (e) { return 0; }
+  }
+  function setBest(v) { try { localStorage.setItem('bubblecat_best', String(v)); } catch (e) {} }
+
+  function reset() {
+    for (var i = bubbles.length - 1; i >= 0; i--) recycle(bubbles[i]);
+    bubbles.length = 0;
+    score = 0; lives = MAX_LIVES; combo = 0; level = 1;
+    elapsed = 0; spawnEvery = 1.25; spawnTimer = 0.35;
+    scoreVal.textContent = '0';
+    comboEl.classList.remove('show');
+    drawLives();
+  }
+
+  function startGame() {
+    reset();
+    state = STATE.PLAY;
+    startScreen.classList.add('hidden');
+    overScreen.classList.add('hidden');
+    audio();
+  }
+
+  function gameOver() {
+    state = STATE.OVER;
+    var best = getBest();
+    var isBest = score > best;
+    if (isBest) { best = score; setBest(best); }
+    finalScore.textContent = score;
+    bestLine.textContent = (isBest ? 'New best! ' : 'Best: ') + best;
+    overScreen.classList.remove('hidden');
+  }
+
+  document.getElementById('playBtn').addEventListener('click', startGame);
+  document.getElementById('againBtn').addEventListener('click', startGame);
+  drawLives();
+
+  // ------------------------------------------------------------------ tap
+  var raycaster = new THREE.Raycaster();
+  var ndc = new THREE.Vector2();
+  var tapSphere = new THREE.Sphere();
+  var hitPoint = new THREE.Vector3();
+
+  function handleTap(clientX, clientY) {
+    if (state !== STATE.PLAY) return;
+    var rect = renderer.domElement.getBoundingClientRect();
+    ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+
+    var hit = null, hitDist = Infinity;
+    for (var i = 0; i < bubbles.length; i++) {
+      var b = bubbles[i];
+      if (b.dead) continue;
+      var rad = b.r * Math.max(b.grow, 0.35) * 1.35 + 0.12;  // finger-friendly padding
+      tapSphere.set(b.obj.position, rad);
+      if (raycaster.ray.intersectSphere(tapSphere, hitPoint)) {
+        var d = hitPoint.distanceTo(camera.position);
+        if (d < hitDist) { hitDist = d; hit = b; }
+      }
+    }
+    if (hit) pop(hit);
+    else {
+      combo = 0;
+      comboEl.classList.remove('show');
+    }
+  }
+
+  function pop(b) {
+    b.dead = true;
+    combo++;
+    var gain = combo >= 3 ? 2 : 1;
+    score += gain;
+    scoreVal.textContent = score;
+
+    burst(b.obj.position, b.r * Math.max(b.grow, .4), b.obj.userData.shell.material.color.getHex());
+    popSound(0.85 + Math.min(combo, 10) * 0.07 + (0.5 - b.r) * 0.4);
+    floatText('+' + gain, b.obj.position);
+    if (combo === 3) { showCombo('Combo x3!'); catParts.wave = 1; }
+    else if (combo > 3 && combo % 3 === 0) { showCombo('Combo x' + combo + '!'); catParts.wave = 1; }
+    catParts.blinkTimer = 0.12;
+  }
+
+  renderer.domElement.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    handleTap(e.clientX, e.clientY);
+  }, { passive: false });
+
+  if (!window.PointerEvent) {
+    renderer.domElement.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      for (var i = 0; i < e.changedTouches.length; i++)
+        handleTap(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+    }, { passive: false });
+    renderer.domElement.addEventListener('mousedown', function (e) { handleTap(e.clientX, e.clientY); });
+  }
+
+  // --------------------------------------------------------------- resize
+  function resize() {
+    var w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+
+    // Framed close so the cat reads as a character rather than scenery.
+    // Portrait gets a wider fov and a touch more distance, since it has the
+    // least horizontal room for the cat and the bubble lane side by side.
+    var portrait = h > w;
+    // Close enough that the cat reads as a character, but not so close that the
+    // raised wand crops off the left edge — the player has to see bubbles born.
+    // Aimed high and slightly right: the cat sits low in the left corner and
+    // the rest of the frame is open sky for bubbles to be chased into.
+    var lookY = portrait ? 5.0 : 4.5;
+    camera.fov = portrait ? 64 : 52;
+    camera.position.set(portrait ? 0.4 : 0.3, portrait ? 3.8 : 3.6, portrait ? 11 : 11.5);
+    // wide screens have room to spare, so aim further right and let the cat
+    // sit further into the corner than portrait can afford
+    var lookX = portrait ? 0.2 : 1.1;
+    camera.lookAt(lookX, lookY, 0);
+    camera.updateProjectionMatrix();
+
+    // Pin the cat to the left edge of whatever frame we ended up with, rather
+    // than leaving it at a fixed world spot that slides around as the aspect
+    // ratio changes. Worked out at the sprite's own depth, not the play plane.
+    if (USE_SPRITE_CAT && SPRITE.mesh) {
+      var dz = camera.position.z - SPRITE.z;
+      var halfHc = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * dz;
+      var halfWc = halfHc * camera.aspect;
+      var centreX = camera.position.x + (lookX - camera.position.x) * (dz / camera.position.z);
+      var spriteW = SPRITE.worldH * (SPRITE.w / SPRITE.h);
+      SPRITE.mesh.position.x = centreX - halfWc + spriteW * 0.5;
+    }
+
+    // A closer camera shows less sky, so the escape line has to follow the
+    // framing — otherwise bubbles would pop out of view long before they count
+    // as missed. Derived from the frustum at the play plane, plus a margin.
+    var halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.position.z;
+    ESCAPE_Y = lookY + halfH + 0.7;
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
+  resize();
+
+  // ----------------------------------------------------------------- loop
+  var clock = new THREE.Clock();
+
+  function easeOutBack(x) {
+    var c1 = 1.7, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    var dt = Math.min(clock.getDelta(), 0.05);
+    var t = clock.elapsedTime;
+
+    for (var ci = 0; ci < clouds.length; ci++) {
+      var cloud = clouds[ci];
+      cloud.position.x += cloud.userData.speed * dt;
+      if (cloud.position.x > 55) cloud.position.x = -55;
+    }
+
+    for (var ti = 0; ti < trees.length; ti++) {
+      trees[ti].rotation.z = Math.sin(t * 0.7 + ti) * 0.022;
+    }
+
+    // ---- cat idle animation
+    if (USE_SPRITE_CAT) animateCatSprite(t, dt);
+
+    if (!USE_SPRITE_CAT) {                   // legacy 3D cat, kept for comparison
+    cat.position.y = Math.sin(t * 2.1) * 0.03;
+    catParts.head.rotation.z = Math.sin(t * 1.3) * 0.05;
+    catParts.head.rotation.y = -0.34 + Math.sin(t * 0.6) * 0.12;   // counter the body turn so the face meets the player
+    for (var s = 0; s < catParts.tailSegs.length; s++) {
+      catParts.tailSegs[s].rotation.z = Math.sin(t * 2.6 - s * 0.55) * 0.26;
+      catParts.tailSegs[s].rotation.x = Math.sin(t * 1.7 - s * 0.4) * 0.12;
+    }
+    catParts.puff = Math.max(0, catParts.puff - dt * 2.4);
+
+    // wand arm: lazy sway, plus a lift and a flick of the wrist on each puff
+    var aR = catParts.armR;
+    aR.shoulder.rotation.z = -2.5 - Math.sin(t * 1.4) * 0.05 - catParts.puff * 0.1;
+    aR.shoulder.rotation.x = -0.45 + Math.sin(t * 1.1) * 0.05;
+    aR.elbow.rotation.z = 0.45 + Math.sin(t * 1.4 + 0.6) * 0.06 + catParts.puff * 0.08;
+    // cancel the arm's accumulated twist so the wand always points skyward
+    catParts.wand.rotation.z = -(aR.shoulder.rotation.z + aR.elbow.rotation.z) - 0.3;
+    catParts.wand.rotation.x = Math.sin(t * 1.6) * 0.08 - catParts.puff * 0.1;
+
+    // free arm: rests on the belly, waves when a combo lands
+    catParts.wave = Math.max(0, catParts.wave - dt * 1.6);
+    var aL = catParts.armL;
+    var waving = catParts.wave > 0 ? Math.sin(catParts.wave * 22) * 0.5 : 0;
+    aL.shoulder.rotation.z = 0.42 - catParts.wave * 1.5;
+    aL.shoulder.rotation.x = -0.5 + Math.sin(t * 1.7) * 0.06;
+    aL.elbow.rotation.z = -0.85 + waving;
+
+    // cheeks and mouth puff out as a bubble is being blown
+    var pf = 1 + catParts.puff * 0.5;
+    catParts.cheeks[0].scale.set(pf, .75 * pf, .5 * pf);
+    catParts.cheeks[1].scale.set(pf, .75 * pf, .5 * pf);
+    catParts.mouth.scale.set(0.9 * pf, 0.7 * pf, 0.5);
+    catParts.pads[0].scale.set(pf, 0.82 * pf, 0.62);
+    catParts.pads[1].scale.set(pf, 0.82 * pf, 0.62);
+    catParts.film.material.opacity = 0.35 + Math.abs(Math.sin(t * 3)) * 0.25;
+    catParts.bell.position.x = Math.sin(t * 2.4) * 0.04;
+
+    // ears twitch now and then
+    catParts.ears[0].rotation.z = -0.24 - Math.sin(t * 0.9) * 0.06;
+    catParts.ears[1].rotation.z = 0.24 + Math.sin(t * 1.1 + 1) * 0.06;
+
+    // brows lift while blowing, for a bit of effort on the face
+    catParts.brows[0].position.y = catParts.brows[1].position.y = 0.38 + catParts.puff * 0.06;
+
+    catParts.blinkTimer -= dt;
+    if (catParts.blinkTimer < -2.6 - Math.random()) catParts.blinkTimer = 0.11;
+    var blinkScale = catParts.blinkTimer > 0 ? 0.12 : 1;
+    catParts.eyes[0].scale.y = catParts.eyes[1].scale.y = blinkScale;
+    }
+
+    // ---- spawning
+    if (state === STATE.PLAY) {
+      elapsed += dt;
+      level = 1 + Math.floor(elapsed / 18);
+      spawnEvery = Math.max(0.42, 1.25 - elapsed * 0.022);
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnBubble();
+        spawnTimer = spawnEvery * (0.75 + Math.random() * 0.5);
+        if (level >= 3 && Math.random() < 0.25) spawnTimer = 0.5;    // quick double puff
+      }
+    }
+
+    // ---- bubbles
+    for (var bi = bubbles.length - 1; bi >= 0; bi--) {
+      var b = bubbles[bi];
+      if (b.dead) { recycle(b); bubbles.splice(bi, 1); continue; }
+
+      if (b.grow < 1) {
+        b.grow = Math.min(1, b.grow + dt * 3.2);
+        b.obj.scale.setScalar(b.r * (0.2 + 0.8 * easeOutBack(b.grow)));
+        if (b.grow < 0.55) {                   // still clinging to the wand
+          updateSpawnPoint();
+          b.obj.position.lerp(spawnPoint, 0.5).add(b.jitter);
+          continue;
+        }
+      }
+
+      b.obj.position.y += b.vy * dt;
+      b.obj.position.x += (b.vx + Math.sin(t * 1.7 + b.wobPhase) * b.wobAmp) * dt;
+      b.obj.position.z += Math.sin(t * 1.1 + b.wobPhase) * 0.35 * dt;
+      b.obj.rotation.y += b.spin * dt;
+      var wob = 1 + Math.sin(t * 5 + b.wobPhase) * 0.04;
+      b.obj.scale.set(b.r / wob, b.r * wob, b.r / wob);
+
+      if (b.obj.position.y > ESCAPE_Y) {
+        recycle(b);
+        bubbles.splice(bi, 1);
+        if (state === STATE.PLAY) {
+          combo = 0;
+          comboEl.classList.remove('show');
+          lives--;
+          drawLives();
+          missSound();
+          if (lives <= 0) gameOver();
+        }
+      }
+    }
+
+    // ---- sparks
+    for (var si = sparks.length - 1; si >= 0; si--) {
+      var sp = sparks[si];
+      sp.life -= dt * (sp.flash ? 4.5 : 2.2);
+      if (sp.life <= 0) {
+        scene.remove(sp.s);
+        sp.s.visible = false;
+        sparkPool.push(sp.s);
+        sparks.splice(si, 1);
+        continue;
+      }
+      if (sp.flash) {
+        sp.s.scale.setScalar(sp.size * (1 + (1 - sp.life) * 1.6));
+        sp.s.material.opacity = sp.life * 0.9;
+      } else {
+        sp.s.position.x += sp.vx * dt;
+        sp.s.position.y += sp.vy * dt;
+        sp.s.position.z += sp.vz * dt;
+        sp.vy -= 3.2 * dt;
+        sp.s.material.opacity = sp.life;
+        sp.s.scale.setScalar(sp.size * (0.5 + sp.life * 0.8));
+      }
+    }
+
+    // ---- floating "+1" text
+    for (var fi = floaters.length - 1; fi >= 0; fi--) {
+      var fo = floaters[fi];
+      fo.life -= dt * 1.5;
+      if (fo.life <= 0) {
+        scene.remove(fo.s);
+        fo.s.material.map.dispose();
+        fo.s.material.dispose();
+        floaters.splice(fi, 1);
+        continue;
+      }
+      fo.s.position.y += dt * 1.6;
+      fo.s.material.opacity = Math.min(1, fo.life * 1.4);
+      var k = 1 + (1 - fo.life) * 0.4;
+      fo.s.scale.set(1.6 * k, 0.8 * k, 1);
+    }
+
+    if (comboTimer > 0) {
+      comboTimer -= dt;
+      if (comboTimer <= 0) comboEl.classList.remove('show');
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) clock.getDelta();   // drop the paused time
+  });
+
+  animate();
+})();
+</script>
+</body>
+</html>
