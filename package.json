@@ -5,7 +5,9 @@
   "description": "Sofiarcade - a little arcade of simple browser games, one folder per game under site/.",
   "main": "serve.js",
   "scripts": {
-    "start": "node serve.js"
+    "start": "node serve.js",
+    "test": "node --test",
+    "check": "node --check serve.js && node --check site/learn/content.js && node --check site/learn/game.js"
   },
   "engines": {
     "node": ">=18"
