@@ -126,3 +126,7 @@ Manual browser QA: all 35 rounds, wrong-answer retry, repeated animal taps,
 completion/replay, hub navigation, mute persistence, mobile layouts, and Bubble
 Cat start/pause/resume/home. Device voice quality should also be checked on the
 intended phone/tablet; browser automation does not verify audible output.
+
+Bubble Cat now has labeled Pause and Home controls during play. Home opens a
+confirmation dialog and pauses the round. Stay here (or Escape) restores the prior
+playing/paused state; Yes, go home ends the round and returns to the arcade.
