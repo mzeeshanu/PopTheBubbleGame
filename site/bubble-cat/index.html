@@ -43,6 +43,22 @@
   .iconbtn svg { width:46%; height:46%; fill:currentColor; }
   .hud.playing .iconbtn { display:flex; }
   .iconbtn { display:none; }
+  .game-controls { display:flex; gap:10px; }
+  .game-controls .iconbtn { width:auto; min-height:54px; padding:0 18px; gap:8px; font-size:16px; font-weight:900; }
+  .game-controls .iconbtn svg { width:22px; height:22px; }
+  button:focus-visible, a:focus-visible { outline:4px solid #28455e; outline-offset:4px; }
+  #leaveDialog { margin:auto; border:0; border-radius:30px; padding:32px 24px; width:min(440px, calc(100% - 32px));
+    color:#28455e; background:#f4f8ed; text-align:center; font-family:inherit; box-shadow:0 18px 60px #28455e66; }
+  #leaveDialog::backdrop { background:#28455e88; backdrop-filter:blur(4px); }
+  #leaveDialog h2 { font-size:32px; margin-bottom:16px; }
+  #leaveDialog p { font-size:18px; line-height:1.5; margin-bottom:24px; }
+  #leaveDialog .row { gap:20px; }
+  @media(max-width:600px) {
+    .hud { flex-wrap:wrap; gap:12px; }
+    .game-controls { order:3; width:100%; justify-content:center; }
+    .game-controls .iconbtn { min-height:54px; }
+    #combo { top:calc(env(safe-area-inset-top) + 136px); }
+  }
 
   #combo { position:fixed; left:50%; top:calc(env(safe-area-inset-top) + 74px); transform:translateX(-50%) scale(.6);
     z-index:10; pointer-events:none; color:#fff; font-weight:900; font-size:clamp(18px,5vw,30px);
@@ -79,9 +95,13 @@
 
 <div class="hud" id="hud">
   <div class="pill" id="score"><small>SCORE</small><span id="scoreVal">0</span></div>
+  <div class="game-controls">
   <button class="iconbtn" id="pauseBtn" aria-label="Pause">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="2"/><rect x="14" y="4" width="5" height="16" rx="2"/></svg>
+    <span>Pause</span>
   </button>
+  <button class="iconbtn" id="homeBtn"><span aria-hidden="true">⌂</span> Home</button>
+  </div>
   <div class="pill" id="lives"></div>
 </div>
 <div id="combo"></div>
@@ -98,7 +118,7 @@
   <button class="btn" id="resumeBtn">Resume</button>
   <div class="row">
     <button class="btn ghost" id="restartBtn">Start over</button>
-    <a class="btn ghost" href="../">Home</a>
+    <button class="btn ghost" id="pausedHomeBtn">Home</button>
   </div>
 </div>
 
@@ -109,6 +129,15 @@
   <button class="btn" id="againBtn">Play again</button>
   <a class="btn ghost" href="../">More games</a>
 </div>
+
+<dialog id="leaveDialog" aria-labelledby="leaveTitle" aria-describedby="leaveDescription">
+  <h2 id="leaveTitle">Go home?</h2>
+  <p id="leaveDescription">This round will end. Would you like to leave the game?</p>
+  <div class="row">
+    <button class="btn" id="stayBtn" autofocus>Stay here</button>
+    <button class="btn ghost" id="leaveBtn">Yes, go home</button>
+  </div>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script>
@@ -1221,6 +1250,8 @@
   var startScreen = document.getElementById('startScreen');
   var overScreen = document.getElementById('overScreen');
   var pauseScreen = document.getElementById('pauseScreen');
+  var leaveDialog = document.getElementById('leaveDialog');
+  var resumeAfterCancel = false;
   var hud = document.getElementById('hud');
   var finalScore = document.getElementById('finalScore');
   var bestLine = document.getElementById('bestLine');
@@ -1296,8 +1327,28 @@
   document.getElementById('pauseBtn').addEventListener('click', pauseGame);
   document.getElementById('resumeBtn').addEventListener('click', resumeGame);
   document.getElementById('restartBtn').addEventListener('click', startGame);
+  function askToGoHome() {
+    resumeAfterCancel = state === STATE.PLAY;
+    pauseGame();
+    leaveDialog.showModal();
+  }
+  function stayHere() {
+    leaveDialog.close();
+    if (resumeAfterCancel) {
+      resumeGame();
+      document.getElementById('homeBtn').focus();
+    } else {
+      document.getElementById('pausedHomeBtn').focus();
+    }
+  }
+  document.getElementById('homeBtn').addEventListener('click', askToGoHome);
+  document.getElementById('pausedHomeBtn').addEventListener('click', askToGoHome);
+  document.getElementById('stayBtn').addEventListener('click', stayHere);
+  document.getElementById('leaveBtn').addEventListener('click', function () { window.location.assign('../'); });
+  leaveDialog.addEventListener('cancel', function (e) { e.preventDefault(); stayHere(); });
 
   document.addEventListener('keydown', function (e) {
+    if (leaveDialog.open) return;
     if (e.key !== 'Escape' && e.key !== 'p' && e.key !== 'P') return;
     if (state === STATE.PLAY) pauseGame();
     else if (state === STATE.PAUSED) resumeGame();

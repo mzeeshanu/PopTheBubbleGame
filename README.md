@@ -97,3 +97,41 @@ Two details that matter, both already handled in `serve.js`:
 
 For a static site this buys you nothing over Cloudflare Pages and costs a running
 container, so prefer Pages unless a game eventually needs a real backend.
+
+## Sofi Learn
+
+`/learn/` is a dependency-free learning hub for shared play, ages 2–4. It has 35
+short rounds across counting 1–5, letters A–F, colors, animals, shapes, and objects.
+The content lives in `site/learn/content.js`; interactions live in `game.js`.
+Home and learning share `site/garden.css`. Bubble Cat remains self-contained.
+
+Tap animals to count them once each. Three shuffled answers allow gentle retries,
+then an explicit Next button lets the child control the pace. Help points to the
+answer. Every world finishes with replay and world-selection choices.
+
+Spoken prompts use the browser's English speech voice; the speaker button starts
+or repeats a prompt when arriving through a direct link. Animal calls are spoken,
+not recordings. Success chimes use Web Audio. Mute is saved on this device when
+local storage is available. Browsers without speech still show every instruction.
+No accounts, analytics, progress collection, external assets, or dependencies were
+added to Sofi Learn. Reduced-motion preferences disable decorative animation.
+
+### Checks
+
+- `npm test`: lesson coverage, unique answers/distractors, shuffle positions, counting.
+- `npm run check`: JavaScript syntax checks.
+- `npm start`: run the existing static server. No build step is needed.
+
+Manual browser QA: all 35 rounds, wrong-answer retry, repeated animal taps,
+completion/replay, hub navigation, mute persistence, mobile layouts, and Bubble
+Cat start/pause/resume/home. Device voice quality should also be checked on the
+intended phone/tablet; browser automation does not verify audible output.
+
+Bubble Cat now has labeled Pause and Home controls during play. Home opens a
+confirmation dialog and pauses the round. Stay here (or Escape) restores the prior
+playing/paused state; Yes, go home ends the round and returns to the arcade.
+
+The arcade home groups adventures into Games and Learning. Each category has its
+own tile list, so future adventures can be added without exposing every learning
+subject on the homepage. Sofi Learn retains the six-world subject hub inside.
+Homepage-only artwork and styling live in `site/arcade.css` and `site/index.html`.
