@@ -130,3 +130,8 @@ intended phone/tablet; browser automation does not verify audible output.
 Bubble Cat now has labeled Pause and Home controls during play. Home opens a
 confirmation dialog and pauses the round. Stay here (or Escape) restores the prior
 playing/paused state; Yes, go home ends the round and returns to the arcade.
+
+The arcade home groups adventures into Games and Learning. Each category has its
+own tile list, so future adventures can be added without exposing every learning
+subject on the homepage. Sofi Learn retains the six-world subject hub inside.
+Homepage-only artwork and styling live in `site/arcade.css` and `site/index.html`.

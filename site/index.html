@@ -6,104 +6,176 @@
       name="viewport"
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <meta name="theme-color" content="#d9eef1" />
+    <meta name="theme-color" content="#eaf4fc" />
     <meta
       name="description"
-      content="A happy little place to learn and play. Explore Sofi Learn and pop bubbles with Bubble Cat."
+      content="Pick your kind of fun at SofiArcade. Pop bubbles with Bubble Cat or discover six playful worlds in Sofi Learn."
     />
-    <title>SofiArcade · Little adventures, big smiles</title>
+    <title>SofiArcade · What shall we play today?</title>
     <link rel="stylesheet" href="/garden.css?v=1" />
+    <link rel="stylesheet" href="/arcade.css?v=1" />
   </head>
-  <body>
+  <body class="arcade-home">
     <main class="shell">
       <header>
-        <a class="brand" href="/">☀ Sofi<span>Arcade</span></a
-        ><a class="pill" href="/learn/">🌱 Sofi Learn</a>
+        <a class="brand" href="/">☀ Sofi<span>Arcade</span></a>
+        <span class="welcome-note">A little place for big smiles</span>
       </header>
-      <section class="hero">
-        <div class="hero-copy">
-          <span class="eyebrow">Made for little explorers</span>
-          <h1>Small adventures.<br />Big happy smiles.</h1>
-          <p>
-            A happy little place to learn and play.<br />Pick a world. Follow
-            your curiosity.
-          </p>
-        </div>
-        <div class="mascot" aria-hidden="true">🐣</div>
+      <section class="arcade-intro">
+        <span class="intro-star star-one" aria-hidden="true">✦</span>
+        <span class="eyebrow">Welcome to your happy place</span>
+        <h1>What shall we<br /><span>play today?</span></h1>
+        <p>A little popping. A little discovering. A whole lot of fun.</p>
+        <nav class="category-links" aria-label="Browse categories">
+          <a href="#games">🕹️ Games</a><a href="#learning">🌈 Learning</a>
+        </nav>
+        <span class="intro-star star-two" aria-hidden="true">✦</span>
       </section>
-      <div class="section-heading">
-        <h2>Let’s learn something lovely.</h2>
-        <small>Sofi Learn · Ages 2–4</small>
+      <div class="categories">
+        <section class="category" id="games" aria-labelledby="games-title">
+          <div class="category-heading">
+            <span class="category-icon" aria-hidden="true">🕹️</span>
+            <div>
+              <h2 id="games-title">Games</h2>
+              <p>Just jump in and play</p>
+            </div>
+          </div>
+          <div class="category-grid">
+            <a class="adventure bubble-adventure" href="/bubble-cat/">
+              <div class="adventure-scene bubble-scene" aria-hidden="true">
+                <span class="scene-cloud cloud-one"></span
+                ><span class="scene-cloud cloud-two"></span>
+                <span class="floating-bubble bubble-one"></span
+                ><span class="floating-bubble bubble-two"></span
+                ><span class="floating-bubble bubble-three"></span>
+                <svg class="mochi" viewBox="0 0 230 220" fill="none">
+                  <ellipse
+                    cx="116"
+                    cy="206"
+                    rx="74"
+                    ry="10"
+                    fill="#589260"
+                    opacity=".2"
+                  />
+                  <path
+                    d="M162 182C224 205 227 132 203 144"
+                    stroke="#EFA54D"
+                    stroke-width="19"
+                    stroke-linecap="round"
+                  />
+                  <ellipse cx="116" cy="169" rx="57" ry="40" fill="#F3AF54" />
+                  <ellipse cx="114" cy="176" rx="32" ry="28" fill="#FFF2D3" />
+                  <path
+                    d="M50 76 43 19 93 47M141 46 188 20 181 84"
+                    fill="#F3AF54"
+                    stroke="#DA8E38"
+                    stroke-width="5"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="m54 35 7 34 23-18M150 52l25-17-4 34"
+                    fill="#E98791"
+                  />
+                  <ellipse cx="116" cy="99" rx="76" ry="65" fill="#FFC46B" />
+                  <path
+                    d="m103 37 4 19m14-20-1 20m16-17-6 18"
+                    stroke="#D78B36"
+                    stroke-width="8"
+                    stroke-linecap="round"
+                  />
+                  <ellipse cx="87" cy="96" rx="14" ry="19" fill="white" />
+                  <ellipse cx="147" cy="96" rx="14" ry="19" fill="white" />
+                  <ellipse cx="90" cy="99" rx="8" ry="12" fill="#335E49" />
+                  <ellipse cx="144" cy="99" rx="8" ry="12" fill="#335E49" />
+                  <circle cx="93" cy="94" r="3" fill="white" />
+                  <circle cx="147" cy="94" r="3" fill="white" />
+                  <ellipse cx="116" cy="127" rx="34" ry="22" fill="#FFF2D3" />
+                  <path
+                    d="m108 117 8 7 8-7"
+                    fill="#B65D66"
+                    stroke="#B65D66"
+                    stroke-width="5"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M104 134q12 14 24 0"
+                    stroke="#794E3C"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="m65 119-34-7m35 15-34 3m135-11 33-7m-34 15 34 3"
+                    stroke="#956843"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                  />
+                  <ellipse cx="75" cy="195" rx="20" ry="12" fill="#FFC46B" />
+                  <ellipse cx="151" cy="195" rx="20" ry="12" fill="#FFC46B" />
+                </svg>
+                <span class="scene-spark" aria-hidden="true">✧</span>
+              </div>
+              <div class="adventure-copy">
+                <span class="game-kicker">Pop the Bubble</span>
+                <h3>Bubble Cat</h3>
+                <p>Mochi’s bubbles are floating away.<br />Ready, set… pop!</p>
+                <span class="adventure-button"
+                  >Play <span aria-hidden="true">→</span></span
+                >
+              </div>
+            </a>
+          </div>
+        </section>
+        <section
+          class="category"
+          id="learning"
+          aria-labelledby="learning-title"
+        >
+          <div class="category-heading">
+            <span class="category-icon" aria-hidden="true">🌈</span>
+            <div>
+              <h2 id="learning-title">Learning</h2>
+              <p>Little discoveries, big wonder</p>
+            </div>
+          </div>
+          <div class="category-grid">
+            <a class="adventure learn-adventure" href="/learn/">
+              <div class="adventure-scene learn-scene" aria-hidden="true">
+                <span class="rainbow"></span
+                ><span class="scene-cloud cloud-one"></span
+                ><span class="scene-cloud cloud-two"></span>
+                <span class="learning-block letter-block">A</span
+                ><span class="learning-block number-block">123</span
+                ><span class="learning-block color-block">🎨</span>
+                <span class="little-explorer">🐣</span
+                ><span class="garden-flower flower-one">✿</span
+                ><span class="garden-flower flower-two">✿</span>
+              </div>
+              <div class="adventure-copy">
+                <span class="game-kicker"
+                  >Six worlds of discovery · Ages 2–4</span
+                >
+                <h3>Sofi Learn</h3>
+                <p>
+                  Numbers, letters, colors and more.<br />Follow your curiosity!
+                </p>
+                <span class="adventure-button"
+                  >Explore <span aria-hidden="true">→</span></span
+                >
+              </div>
+            </a>
+          </div>
+        </section>
       </div>
-      <nav class="worlds" aria-label="Learning worlds">
-        <a class="world" style="--tint: #e6efcf" href="/learn/#numbers"
-          ><span class="art" aria-hidden="true">🐥</span>
-          <div>
-            <h3>Numbers</h3>
-            <p>Count little friends</p>
-          </div>
-          <span class="arrow" aria-hidden="true">↗</span></a
-        >
-        <a class="world" style="--tint: #eae3f5" href="/learn/#letters"
-          ><span class="art" aria-hidden="true">🔤</span>
-          <div>
-            <h3>Letters</h3>
-            <p>Meet the ABCs</p>
-          </div>
-          <span class="arrow" aria-hidden="true">↗</span></a
-        >
-        <a class="world" style="--tint: #fbe3da" href="/learn/#colors"
-          ><span class="art" aria-hidden="true">🎨</span>
-          <div>
-            <h3>Colors</h3>
-            <p>A rainbow to explore</p>
-          </div>
-          <span class="arrow" aria-hidden="true">↗</span></a
-        >
-        <a class="world" style="--tint: #fcf0cb" href="/learn/#animals"
-          ><span class="art" aria-hidden="true">🦁</span>
-          <div>
-            <h3>Animals</h3>
-            <p>Say hello to animals</p>
-          </div>
-          <span class="arrow" aria-hidden="true">↗</span></a
-        >
-        <a class="world" style="--tint: #deedf8" href="/learn/#shapes"
-          ><span class="art" aria-hidden="true">🔺</span>
-          <div>
-            <h3>Shapes</h3>
-            <p>Find a familiar shape</p>
-          </div>
-          <span class="arrow" aria-hidden="true">↗</span></a
-        >
-        <a class="world" style="--tint: #f7e2ec" href="/learn/#objects"
-          ><span class="art" aria-hidden="true">🧸</span>
-          <div>
-            <h3>Objects</h3>
-            <p>Everyday little wonders</p>
-          </div>
-          <span class="arrow" aria-hidden="true">↗</span></a
-        >
-      </nav>
-      <a class="bubble-banner" href="/bubble-cat/"
-        ><span class="art" aria-hidden="true">🐱🫧</span>
-        <div>
-          <span class="eyebrow">Just for the joy of it</span>
-          <h2>Pop the Bubble · Bubble Cat</h2>
-          <p>Mochi’s bubbles are floating away. Can you pop them?</p>
-        </div>
-        <span class="pill">Let’s pop →</span></a
-      >
       <footer>
         <details>
           <summary>For grown-ups</summary>
           <p>
-            Made for shared play, ages 2–4. Sofi Learn explores counting 1–5,
-            letters A–F, six colors, animals, shapes, and everyday objects.
-            There are no timers or penalties in learning worlds. Tap the speaker
-            to hear a prompt; voices depend on your browser and device. Animal
-            calls are spoken playfully. Sound can be turned off. Motion follows
-            your device’s reduced-motion setting.
+            Pick Games for Bubble Cat or Learning for Sofi Learn. Sofi Learn
+            offers 35 short activities covering counting 1–5, letters A–F,
+            colors, animals, shapes, and everyday objects, designed for shared
+            play at ages 2–4. Spoken prompts use your browser’s available voice.
+            Sound can be turned off, and animations respect reduced-motion
+            preferences.
           </p>
         </details>
         <span>Made for Sofia ♡</span>

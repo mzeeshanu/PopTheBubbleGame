@@ -1,0 +1,392 @@
+/* The arcade landing page is separate from the learning world's theme. */
+.arcade-home {
+  background:
+    radial-gradient(ellipse at 10% 5%, #e0f2ff, transparent 48%),
+    radial-gradient(ellipse at 100% 35%, #fce8ed, transparent 45%), #fff9ed;
+}
+.arcade-home .shell {
+  max-width: 1160px;
+}
+.arcade-home header {
+  margin-bottom: 16px;
+}
+.arcade-home .brand {
+  font-size: 28px;
+}
+.welcome-note {
+  font-size: 13px;
+  font-weight: 700;
+  color: #627484;
+}
+.arcade-intro {
+  position: relative;
+  text-align: center;
+  padding: 28px 20px 34px;
+}
+.arcade-intro .eyebrow {
+  color: #677c8d;
+}
+.arcade-intro h1 {
+  font-size: clamp(42px, 6vw, 68px);
+  margin: 18px 0 14px;
+  line-height: 1.04;
+}
+.arcade-intro h1 span {
+  color: #b95734;
+}
+.arcade-intro p {
+  font-size: 17px;
+  margin: 0 0 20px;
+}
+.intro-star {
+  position: absolute;
+  font-size: 46px;
+  color: #edb13c;
+}
+.star-one {
+  top: 58px;
+  left: 9%;
+  transform: rotate(-15deg);
+}
+.star-two {
+  bottom: 90px;
+  right: 9%;
+  color: #a392cc;
+  font-size: 32px;
+}
+.category-links {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.category-links a {
+  background: #fff9;
+  border: 2px solid white;
+  border-radius: 22px;
+  padding: 14px 22px;
+  min-height: 52px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #28455e0b;
+}
+.categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+.category {
+  scroll-margin-top: 20px;
+  min-width: 0;
+}
+.category-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 4px 0 18px 8px;
+}
+.category-icon {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 18px;
+  background: #dcebf9;
+  font-size: 27px;
+}
+#learning .category-icon {
+  background: #ede4f5;
+}
+.category-heading h2 {
+  font-size: 24px;
+  letter-spacing: -0.6px;
+  margin: 0 0 4px;
+}
+.category-heading p {
+  font-size: 13px;
+  margin: 0;
+  color: #536773;
+}
+.category-grid {
+  display: grid;
+  gap: 24px;
+}
+.adventure {
+  display: block;
+  border: 4px solid white;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow:
+    0 7px 0 #28455e10,
+    0 16px 40px #28455e0a;
+  transition: transform 0.18s;
+}
+.adventure:hover {
+  transform: translateY(-5px);
+}
+.adventure:active {
+  transform: translateY(2px);
+}
+.adventure-scene {
+  height: 235px;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.bubble-scene {
+  background: linear-gradient(#8fd4f5, #cdefff);
+}
+.adventure-scene:after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 130%;
+  height: 100px;
+  border-radius: 50%;
+  bottom: -59px;
+  left: -15%;
+  background: #b5d691;
+}
+.mochi {
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  left: 50%;
+  bottom: 1px;
+  transform: translateX(-50%);
+}
+.scene-cloud {
+  position: absolute;
+  width: 82px;
+  height: 25px;
+  background: #ffffffab;
+  border-radius: 40px;
+}
+.scene-cloud:before {
+  content: "";
+  position: absolute;
+  background: inherit;
+  width: 40px;
+  height: 38px;
+  left: 17px;
+  top: -17px;
+  border-radius: 50%;
+}
+.cloud-one {
+  top: 48px;
+  left: 7%;
+}
+.cloud-two {
+  top: 70px;
+  right: 5%;
+  transform: scale(0.75);
+}
+.floating-bubble {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #fff9;
+  background:
+    radial-gradient(circle at 30% 25%, #fffe 0 7%, transparent 10%),
+    linear-gradient(135deg, #fff6, #e2c0f866, #98e2f244);
+  box-shadow:
+    inset -5px -6px 9px #fff5,
+    0 4px 10px #659abd20;
+  animation: bubble-drift 5s ease-in-out infinite;
+}
+.bubble-one {
+  width: 76px;
+  height: 76px;
+  right: 15%;
+  top: 26px;
+}
+.bubble-two {
+  width: 49px;
+  height: 49px;
+  left: 12%;
+  top: 125px;
+  animation-delay: -2s;
+}
+.bubble-three {
+  width: 36px;
+  height: 36px;
+  right: 7%;
+  top: 151px;
+  animation-delay: -3s;
+}
+.scene-spark {
+  position: absolute;
+  left: 28%;
+  top: 30px;
+  color: white;
+  font-size: 35px;
+}
+.learn-scene {
+  background: linear-gradient(#e6ddfa, #f5eaff);
+}
+.learn-scene:after {
+  background: #c7dda4;
+}
+.rainbow {
+  position: absolute;
+  width: 174px;
+  height: 174px;
+  border-radius: 50%;
+  border: 14px solid #eeaa95;
+  box-shadow:
+    inset 0 0 0 13px #f3d388,
+    inset 0 0 0 26px #b6d6ac,
+    inset 0 0 0 39px #afcbe3;
+  left: 50%;
+  top: 25px;
+  transform: translateX(-50%);
+  clip-path: inset(0 0 50% 0);
+  opacity: 0.9;
+}
+.little-explorer {
+  position: absolute;
+  font-size: 94px;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+.learning-block {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 17px;
+  font-size: 36px;
+  font-weight: 900;
+  border: 3px solid #fff8;
+  box-shadow: 0 5px 0 #28455e15;
+}
+.letter-block {
+  left: 13%;
+  top: 100px;
+  background: #ffcb8a;
+  color: #965c2b;
+  transform: rotate(-12deg);
+}
+.number-block {
+  right: 10%;
+  top: 88px;
+  background: #c7defa;
+  color: #3e6895;
+  transform: rotate(12deg);
+  font-size: 25px;
+}
+.color-block {
+  right: 23%;
+  bottom: 11px;
+  width: 49px;
+  height: 49px;
+  background: #f6c9d9;
+  font-size: 30px;
+  transform: rotate(-7deg);
+}
+.garden-flower {
+  position: absolute;
+  bottom: 10px;
+  font-size: 32px;
+  color: #cb7391;
+}
+.flower-one {
+  left: 14%;
+}
+.flower-two {
+  right: 9%;
+  color: #b18acb;
+  font-size: 24px;
+}
+.adventure-copy {
+  padding: 25px 28px 28px;
+  background: #f3faff;
+}
+.learn-adventure .adventure-copy {
+  background: #f6f0fc;
+}
+.game-kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  font-weight: 900;
+  color: #546d7d;
+}
+.adventure-copy h3 {
+  font-size: 34px;
+  letter-spacing: -1px;
+  margin: 10px 0;
+}
+.adventure-copy p {
+  font-size: 16px;
+  margin: 0 0 22px;
+  color: #466070;
+}
+.adventure-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 14px 22px;
+  background: #ffcd75;
+  color: #624619;
+  border-radius: 19px;
+  font-weight: 900;
+  font-size: 20px;
+  box-shadow: 0 4px 0 #e3b15d;
+}
+.learn-adventure .adventure-button {
+  background: #d7c6f1;
+  color: #51426f;
+  box-shadow: 0 4px 0 #bda8dc;
+}
+.arcade-home footer {
+  margin-top: 36px;
+}
+@keyframes bubble-drift {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@media (max-width: 650px) {
+  .categories {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .arcade-intro {
+    padding: 20px 4px 30px;
+  }
+  .welcome-note {
+    display: none;
+  }
+  .arcade-home .brand {
+    font-size: 26px;
+  }
+  .intro-star {
+    display: none;
+  }
+  .arcade-intro h1 {
+    font-size: 46px;
+  }
+  .arcade-intro p {
+    font-size: 15px;
+    max-width: 290px;
+    margin: 0 auto 20px;
+  }
+  .adventure-scene {
+    height: 215px;
+  }
+  .adventure-copy {
+    padding: 23px;
+  }
+  .category-heading {
+    margin-left: 3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-bubble {
+    animation: none;
+  }
+  .adventure {
+    transition: none;
+  }
+}
