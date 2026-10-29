@@ -442,9 +442,15 @@ details p {
 .bounce {
   animation: hop 0.45s ease;
 }
-.choice.hint { border: 3px dashed #548532; }
-#repeat { min-width: 56px; }
-.shape { max-width: 100%; }
+.choice.hint {
+  border: 3px dashed #548532;
+}
+#repeat {
+  min-width: 56px;
+}
+.shape {
+  max-width: 100%;
+}
 @keyframes hop {
   50% {
     transform: translateY(-12px) rotate(-4deg);
@@ -587,4 +593,38 @@ details p {
     animation: none !important;
     transition: none !important;
   }
+}
+.voice-settings {
+  margin: 24px auto 0;
+  padding: 16px 20px;
+  border: 2px solid #dbe6dc;
+  border-radius: 22px;
+  background: #ffffffb3;
+}
+.voice-settings summary {
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+}
+.voice-settings label {
+  display: block;
+  margin: 18px 0 8px;
+  font-weight: 800;
+}
+.voice-settings select {
+  font: inherit;
+  color: inherit;
+  background: white;
+  border: 2px solid #b8c9c5;
+  border-radius: 14px;
+  min-height: 52px;
+  padding: 10px;
+  width: 100%;
+}
+.voice-settings button {
+  margin-top: 20px;
+}
+.voice-settings select:focus-visible {
+  outline: 4px solid #285bb7;
+  outline-offset: 3px;
 }

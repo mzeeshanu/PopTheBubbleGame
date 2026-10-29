@@ -16,22 +16,22 @@
   } catch {}
   const hasSpeech =
     "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  const { cheers, welcomes, createNarrator } = window.SofiNarration;
+  let cheerIndex = 0;
+  const narrator = createNarrator({
+    synth: hasSpeech ? window.speechSynthesis : null,
+    Utterance: hasSpeech ? window.SpeechSynthesisUtterance : null,
+    onError: () => {
+      document.querySelector("#audio-note").textContent =
+        "Voice is unavailable right now. You can still play using the pictures and words.";
+    },
+  });
+  narrator.configure({ enabled });
   function stop() {
-    if (hasSpeech) window.speechSynthesis.cancel();
+    narrator.stop();
   }
-  function say(text) {
-    stop();
-    if (!enabled || !hasSpeech) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.82;
-    utterance.pitch = 1.12;
-    utterance.onerror = (event) => {
-      if (!["interrupted", "canceled"].includes(event.error))
-        document.querySelector("#audio-note").textContent =
-          "Voice is unavailable right now. You can still play using the pictures and words.";
-    };
-    window.speechSynthesis.speak(utterance);
+  function say(text, kind) {
+    narrator.say(text, kind);
   }
   function chime() {
     if (!enabled) return;
@@ -62,6 +62,7 @@
   soundLabel();
   sound.onclick = () => {
     enabled = !enabled;
+    narrator.configure({ enabled });
     soundLabel();
     stop();
     if (!enabled && context) context.suspend().catch(() => {});
@@ -121,7 +122,7 @@
             ? `${t[0]} is for ${t[2]}. Find ${t[0]}.`
             : `Find ${t[0].toLowerCase()}. Look for the picture with the dotted outline.`;
       document.querySelector(".feedback").textContent = hint;
-      say(hint);
+      say(hint, "hint");
       const right = Array.from(document.querySelectorAll(".choice")).find(
         (b) => current.choices[Number(b.dataset.answer)] === t,
       );
@@ -145,7 +146,7 @@
             button.append(number);
             button.dataset.count = counted.size;
           }
-          say(button.dataset.count);
+          say(`${button.dataset.count}!`, "count");
         }),
     );
     if (document.querySelector("#example"))
@@ -172,7 +173,10 @@
       button.classList.add("retry");
       document.querySelector(".feedback").textContent =
         `That’s ${selected[0]}. Let’s try again!`;
-      say(`That’s ${selected[0]}. ${current.prompt}`);
+      say(
+        `That’s ${selected[0]}. Let’s look together! ${current.prompt}`,
+        "hint",
+      );
       return;
     }
     answered = true;
@@ -186,16 +190,22 @@
           : worldKey === "animals"
             ? `${t[0]}! ${t[2]}`
             : `${t[0]}!`;
-    document.querySelector(".feedback").textContent =
-      `⭐ ${detail} You found it!`;
-    say(`${detail} You found it!`);
+    const cheer = cheers[cheerIndex++ % cheers.length];
+    document.querySelector(".feedback").textContent = `⭐ ${detail} ${cheer}`;
+    say([
+      { text: detail, kind: worldKey === "animals" ? "animal" : "prompt" },
+      { text: cheer, kind: "cheer" },
+    ]);
     document.querySelectorAll(".choice").forEach((b) => (b.disabled = true));
     document.querySelector("#next").disabled = false;
   }
   function complete() {
     current = null;
     game.innerHTML = `<section class="lesson"><div class="celebration" aria-hidden="true">🌟🐣🌟</div><span class="eyebrow">A lovely little discovery</span><h1>You did it!</h1><p>You explored ${worlds[worldKey].name.toLowerCase()}.<br>Let’s see what else we can find.</p><div class="complete-actions"><a class="pill next" href="#">Choose a world</a><button class="pill" id="again">↻ Play again</button></div></section>`;
-    say("You did it! What a lovely discovery!");
+    say(
+      `Hip, hip, hooray! You explored ${worlds[worldKey].name.toLowerCase()}! Give yourself a big hug. What shall we discover next?`,
+      "cheer",
+    );
     document.querySelector("#again").onclick = () => {
       round = 0;
       lesson();
@@ -221,7 +231,10 @@
     history.pushState(null, "", link.getAttribute("href"));
     route();
     if (Object.hasOwn(worlds, key))
-      say(`Let’s explore ${worlds[key].name}. ${current.prompt}`);
+      say([
+        { text: welcomes[key], kind: "cheer" },
+        { text: current.prompt, kind: "prompt" },
+      ]);
   });
   window.addEventListener("popstate", route);
   window.addEventListener("hashchange", route);
@@ -232,5 +245,70 @@
       if (context) context.suspend().catch(() => {});
     }
   });
+  const voiceSelect = document.querySelector("#voice-choice");
+  const styleSelect = document.querySelector("#voice-style");
+  const previewVoice = document.querySelector("#preview-voice");
+  let preferred = "";
+  try {
+    preferred = localStorage.getItem("sofi-voice") || "";
+    styleSelect.value =
+      localStorage.getItem("sofi-voice-style") === "gentle"
+        ? "gentle"
+        : "playful";
+  } catch {}
+  narrator.configure({ preferred, style: styleSelect.value });
+  function updateVoices() {
+    const voices = hasSpeech
+      ? window.speechSynthesis
+          .getVoices()
+          .filter((v) => /^en(?:[-_]|$)/i.test(v.lang))
+      : [];
+    voiceSelect.replaceChildren(new Option("Automatic · best available", ""));
+    voices.forEach((voice) =>
+      voiceSelect.add(
+        new Option(`${voice.name} (${voice.lang})`, voice.voiceURI),
+      ),
+    );
+    voiceSelect.value = voices.some((v) => v.voiceURI === preferred)
+      ? preferred
+      : "";
+  }
+  updateVoices();
+  if (hasSpeech)
+    window.speechSynthesis.addEventListener("voiceschanged", updateVoices);
+  else {
+    voiceSelect.disabled = true;
+    styleSelect.disabled = true;
+    previewVoice.disabled = true;
+  }
+  voiceSelect.onchange = () => {
+    preferred = voiceSelect.value;
+    narrator.configure({ preferred });
+    try {
+      localStorage.setItem("sofi-voice", preferred);
+    } catch {}
+  };
+  styleSelect.onchange = () => {
+    narrator.configure({ style: styleSelect.value });
+    try {
+      localStorage.setItem("sofi-voice-style", styleSelect.value);
+    } catch {}
+  };
+  previewVoice.onclick = () => {
+    if (!enabled) {
+      document.querySelector("#audio-note").textContent =
+        "Turn Sound on above to hear the voice preview.";
+      return;
+    }
+    document.querySelector("#audio-note").textContent = "";
+    say([
+      {
+        text: "Hello, little explorer! Ready for an adventure?",
+        kind: "cheer",
+      },
+      { text: "One. Two. Three!", kind: "count" },
+      { text: "Hooray! You found it!", kind: "cheer" },
+    ]);
+  };
   route();
 })();

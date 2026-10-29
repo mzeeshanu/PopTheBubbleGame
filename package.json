@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node serve.js",
     "test": "node --test",
-    "check": "node --check serve.js && node --check site/learn/content.js && node --check site/learn/game.js"
+    "check": "node --check serve.js && node --check site/learn/content.js && node --check site/learn/narration.js && node --check site/learn/game.js"
   },
   "engines": {
     "node": ">=18"

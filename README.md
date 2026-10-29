@@ -135,3 +135,13 @@ The arcade home groups adventures into Games and Learning. Each category has its
 own tile list, so future adventures can be added without exposing every learning
 subject on the homepage. Sofi Learn retains the six-world subject hub inside.
 Homepage-only artwork and styling live in `site/arcade.css` and `site/index.html`.
+
+### Expressive narration
+
+Sofi Learn has playful welcomes per world, rotating encouragement, and different
+speech pacing for counting, instructions, and celebrations. Under **For grown-ups
+· Voice & sound**, choose Playful explorer or Gentle storyteller, select an
+available English voice, and use Hear voice to preview it. Preferences stay on
+this device. Automatic selection prefers natural/enhanced voices when available;
+actual voice quality depends on the browser's installed voices. New interactions
+cancel old narration, and muting cancels all queued phrases.

@@ -12,9 +12,10 @@
       content="Six gentle, playful learning worlds for little explorers ages 2–4."
     />
     <title>Sofi Learn · SofiArcade</title>
-    <link rel="stylesheet" href="/garden.css?v=1" />
+    <link rel="stylesheet" href="/garden.css?v=2" />
     <script src="/learn/content.js?v=1" defer></script>
-    <script src="/learn/game.js?v=1" defer></script>
+    <script src="/learn/narration.js?v=1" defer></script>
+    <script src="/learn/game.js?v=2" defer></script>
   </head>
   <body>
     <main class="shell">
@@ -26,6 +27,23 @@
       </header>
       <div id="game"></div>
       <p class="audio-note" id="audio-note"></p>
+      <details class="voice-settings">
+        <summary>For grown-ups · Voice &amp; sound</summary>
+        <p>
+          Choose a voice and try it together. Available voices depend on this
+          device.
+        </p>
+        <label for="voice-style">Speaking style</label>
+        <select id="voice-style">
+          <option value="playful">Playful explorer</option>
+          <option value="gentle">Gentle storyteller</option>
+        </select>
+        <label for="voice-choice">Voice</label>
+        <select id="voice-choice">
+          <option value="">Automatic · best available</option>
+        </select>
+        <button class="pill" id="preview-voice">🔊 Hear voice</button>
+      </details>
       <noscript
         ><p>
           Please enable JavaScript to play Sofi Learn.
